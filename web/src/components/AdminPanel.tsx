@@ -13,9 +13,10 @@ import { shortTime } from "../time";
 
 const TOKEN_KEY = "onefold_admin_token";
 
-type Props = { topics: { slug: string; name: string }[]; onEval?: () => void };
+import { Link } from "react-router-dom";
+import { fetchTopics } from "../api";
 
-export default function AdminPanel({ topics, onEval }: Props) {
+export default function AdminPanel() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) ?? "");
   const [draft, setDraft] = useState(token);
   const [sources, setSources] = useState<AdminSource[]>([]);
@@ -26,7 +27,8 @@ export default function AdminPanel({ topics, onEval }: Props) {
 
   const [name, setName] = useState("");
   const [feedUrl, setFeedUrl] = useState("");
-  const [topicSlug, setTopicSlug] = useState(topics[0]?.slug ?? "ai");
+  const [topicSlug, setTopicSlug] = useState("ai");
+  const [topics, setTopics] = useState<{ slug: string; name: string }[]>([]);
 
   const load = useCallback(
     async (t: string) => {
@@ -42,6 +44,13 @@ export default function AdminPanel({ topics, onEval }: Props) {
     },
     [],
   );
+
+  useEffect(() => {
+    fetchTopics().then((list) => {
+      setTopics(list);
+      if (list[0]) setTopicSlug(list[0].slug);
+    }).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (token) load(token);
@@ -116,9 +125,9 @@ export default function AdminPanel({ topics, onEval }: Props) {
           >
             立即抓取
           </button>
-          <button className="btn" onClick={onEval}>
+          <Link className="btn" to="/admin/eval">
             实验台
-          </button>
+          </Link>
           <button className="btn solid" onClick={() => setToken("")}>
             退出
           </button>

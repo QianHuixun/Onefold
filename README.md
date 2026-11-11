@@ -101,7 +101,20 @@ data/       SQLite 与快照（不进版本库）
 | POST | `/api/admin/eval/pairs/{id}` | 提交标注 |
 | GET | `/api/admin/eval/metrics` | 阈值扫描与 P/R/F1 |
 
-管理页在页脚「管理入口」或 `/?admin=1`，阈值实验台在 `/?eval=1`。实验台用法与口径见 [docs/eval.md](docs/eval.md)，中文检索方案见 [docs/search.md](docs/search.md)。
+## 路由
+
+| 路径 | 页面 |
+| --- | --- |
+| `/` | 今日事件 |
+| `/topic/:slug` | 按主题过滤（`ai` / `tech`） |
+| `/e/:id` | 事件详情，可分享、可刷新 |
+| `/search?q=` | 搜索结果 |
+| `/admin` | 数据源管理 |
+| `/admin/eval` | 阈值实验台 |
+
+前端用 react-router，服务端要配 SPA 回退（nginx `try_files $uri $uri/ /index.html`，`provision.sh` 里已经带上）。
+
+实验台用法与口径见 [docs/eval.md](docs/eval.md)，中文检索方案见 [docs/search.md](docs/search.md)。
 
 ## 快捷键
 

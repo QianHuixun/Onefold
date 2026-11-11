@@ -17,9 +17,7 @@ export default function EvalPanel() {
   const [metrics, setMetrics] = useState<EvalMetrics | null>(null);
   const [pairs, setPairs] = useState<EvalPair[]>([]);
   const [cursor, setCursor] = useState(0);
-  const [tab, setTab] = useState<"label" | "curve">(
-    new URLSearchParams(location.search).get("tab") === "curve" ? "curve" : "label",
-  );
+  const [tab, setTab] = useState<"label" | "curve">("label");
   const [threshold, setThreshold] = useState(0.35);
   const [error, setError] = useState("");
 

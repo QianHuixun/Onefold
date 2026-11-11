@@ -9,7 +9,7 @@
 .venv/bin/python -m app.cli eval-export      # 导出曲线 JSON
 ```
 
-界面在 `/?eval=1`，或者管理页点「实验台」。
+界面在 `/admin/eval`，或者管理页点「实验台」。
 
 ## 三个接口
 
