@@ -159,26 +159,8 @@
   .sw-names button.on{background:#fff;color:#0A0A0A;font-weight:600}
   .sw-tag{font-size:9px;letter-spacing:.18em;color:#6A6A72;padding:0 10px 0 6px;text-transform:uppercase}
 
-  @media (max-width:760px){
-    .v{padding:12px 12px 100px}
-    .sheet{padding:26px 22px 40px}
-    .a-body{grid-template-columns:1fr;gap:0;padding-top:28px}
-    .a-side{position:static;display:flex;align-items:baseline;gap:12px;margin-bottom:22px}
-    .a-side-count{font-size:20px;margin-top:0;order:2}
-    .a-side-note{order:3;margin-top:0}
-    .a-title{font-size:20px}
-    .a-names{opacity:1}
-    .b-daynum{font-size:56px}
-    .b-item{grid-template-columns:1fr;gap:10px}
-    .b-idx{display:none}
-    .b-side{text-align:left;display:flex;align-items:baseline;gap:6px}
-    .b-count{font-size:16px}
-    .b-unit{display:inline;margin:0}
-    .c-hero-title{font-size:28px}
-    .c-row{grid-template-columns:1fr;gap:6px}
-    .c-time,.c-dots{display:none}
-    .sw-tag{display:none}
-  }
+  /* 只做桌面端，不做移动端适配 */
+  html{min-width:1100px}
 </style>
 </head>
 <body data-v="a">
