@@ -1,16 +1,13 @@
-import { useState } from "react";
 import { fullDate } from "../time";
 
 type Props = {
   topics: { slug: string; name: string }[];
   active: string;
   onTopic: (slug: string) => void;
-  onSearch: (q: string) => void;
+  onOpenSearch: () => void;
 };
 
-export default function TopBar({ topics, active, onTopic, onSearch }: Props) {
-  const [q, setQ] = useState("");
-
+export default function TopBar({ topics, active, onTopic, onOpenSearch }: Props) {
   return (
     <header className="topbar">
       <div className="topbar-in">
@@ -20,11 +17,7 @@ export default function TopBar({ topics, active, onTopic, onSearch }: Props) {
         </a>
 
         <nav className="nav">
-          <a
-            className={active === "" ? "on" : ""}
-            onClick={() => onTopic("")}
-            role="button"
-          >
+          <a className={active === "" ? "on" : ""} onClick={() => onTopic("")} role="button">
             今日
           </a>
           {topics.map((t) => (
@@ -40,20 +33,14 @@ export default function TopBar({ topics, active, onTopic, onSearch }: Props) {
         </nav>
 
         <div className="top-right">
-          <label className="search">
+          <button className="search-trigger" onClick={onOpenSearch}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
               <circle cx="11" cy="11" r="7" />
               <path d="M16.5 16.5L21 21" />
             </svg>
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && q.trim()) onSearch(q.trim());
-              }}
-              placeholder="搜索事件、来源"
-            />
-          </label>
+            搜索
+            <span className="kbd">⌘K</span>
+          </button>
           <span className="topbar-date">{fullDate()}</span>
         </div>
       </div>

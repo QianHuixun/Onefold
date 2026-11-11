@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_
 from sqlmodel import Session, select
@@ -169,4 +171,6 @@ def search(
                       published_at=a.published_at)
         )
 
+    # 事件和文章混在一起时按时间倒序，和列表页一致
+    hits.sort(key=lambda h: h.published_at or datetime(1970, 1, 1, tzinfo=UTC), reverse=True)
     return SearchOut(q=q, hits=hits[:limit], total=len(hits))

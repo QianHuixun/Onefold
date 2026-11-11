@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import Footer from "./components/Footer";
 import Hero from "./components/Hero";
 import EventRow from "./components/EventRow";
+import IndexNav from "./components/IndexNav";
 import Rail from "./components/Rail";
-import SearchResults from "./components/SearchResults";
+import SearchPalette from "./components/SearchPalette";
 import TopBar from "./components/TopBar";
 import { fetchEvents, fetchStats } from "./api";
 import type { EventItem, Stats } from "./types";
@@ -14,7 +15,8 @@ export default function App() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "error">("loading");
   const [topic, setTopic] = useState("");
-  const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [initialQuery, setInitialQuery] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -31,10 +33,36 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const q = new URLSearchParams(location.search).get("q");
+    if (q) {
+      setInitialQuery(q);
+      setSearchOpen(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+      if (e.key === "Escape") setSearchOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const topics = useMemo(() => {
     const map = new Map<string, string>();
     for (const e of events) map.set(e.topic_slug, e.topic_name);
     return [...map.entries()].map(([slug, name]) => ({ slug, name }));
+  }, [events]);
+
+  const counts = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const e of events) m[e.topic_slug] = (m[e.topic_slug] ?? 0) + 1;
+    return m;
   }, [events]);
 
   const visible = useMemo(
@@ -43,7 +71,11 @@ export default function App() {
   );
 
   const hero = useMemo(
-    () => visible.reduce<EventItem | null>((best, e) => (!best || e.article_count > best.article_count ? e : best), null),
+    () =>
+      visible.reduce<EventItem | null>(
+        (best, e) => (!best || e.article_count > best.article_count ? e : best),
+        null,
+      ),
     [visible],
   );
 
@@ -69,20 +101,10 @@ export default function App() {
         <div className="grain" />
       </div>
 
-      <TopBar
-        topics={topics}
-        active={topic}
-        onTopic={(t) => {
-          setTopic(t);
-          setQuery("");
-        }}
-        onSearch={(q) => setQuery(q)}
-      />
+      <TopBar topics={topics} active={topic} onTopic={setTopic} onOpenSearch={() => setSearchOpen(true)} />
 
       <main className="plate">
-        {query ? (
-          <SearchResults q={query} onClear={() => setQuery("")} />
-        ) : state === "loading" ? (
+        {state === "loading" ? (
           <div className="state">正在取今日事件…</div>
         ) : state === "error" ? (
           <div className="state">
@@ -92,6 +114,15 @@ export default function App() {
           <>
             {hero && <Hero event={hero} />}
             <div className="grid">
+              <IndexNav
+                topics={topics}
+                active={topic}
+                counts={counts}
+                total={events.length}
+                sources={stats?.sources ?? 0}
+                onTopic={setTopic}
+              />
+
               <div className="feed">
                 <div className="feed-head">
                   <div>
@@ -135,6 +166,8 @@ export default function App() {
       </main>
 
       <Footer />
+
+      <SearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} initialQuery={initialQuery} />
     </>
   );
 }
