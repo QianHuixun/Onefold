@@ -10,24 +10,67 @@ export type SearchHit = {
   published_at: string | null;
 };
 
+/** GitHub Pages 这类纯静态托管：读预导出的 JSON，不走后端。 */
+export const STATIC_MODE = import.meta.env.VITE_STATIC === "1";
+
+const DATA = (name: string) => `${import.meta.env.BASE_URL}data/${name}`;
+
 async function getJSON<T>(url: string): Promise<T> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${url} → ${res.status}`);
   return res.json() as Promise<T>;
 }
 
-export const fetchEvents = () => getJSON<EventPage>("/api/events?limit=100");
-export const fetchStats = () => getJSON<Stats>("/api/stats");
+export const fetchEvents = () =>
+  STATIC_MODE ? getJSON<EventPage>(DATA("events.json")) : getJSON<EventPage>("/api/events?limit=100");
+
+export const fetchStats = () =>
+  STATIC_MODE ? getJSON<Stats>(DATA("stats.json")) : getJSON<Stats>("/api/stats");
+
 export const fetchSources = () =>
-  getJSON<{ name: string; topic: string; articles: number }[]>("/api/sources");
-export const fetchTopics = () => getJSON<{ slug: string; name: string }[]>("/api/topics");
-export const fetchEvent = (id: number) => getJSON<EventDetail>(`/api/events/${id}`);
+  STATIC_MODE
+    ? getJSON<{ name: string; topic: string; articles: number }[]>(DATA("sources.json"))
+    : getJSON<{ name: string; topic: string; articles: number }[]>("/api/sources");
+
+export const fetchTopics = () =>
+  STATIC_MODE
+    ? getJSON<{ slug: string; name: string }[]>(DATA("topics.json"))
+    : getJSON<{ slug: string; name: string }[]>("/api/topics");
+
+export const fetchEvent = (id: number) =>
+  STATIC_MODE
+    ? getJSON<EventDetail>(DATA(`events/${id}.json`))
+    : getJSON<EventDetail>(`/api/events/${id}`);
+
+let searchIndex: SearchHit[] | null = null;
 
 export async function fetchSearch(q: string) {
-  const data = await getJSON<{ q: string; hits: SearchHit[]; total: number }>(
-    `/api/search?q=${encodeURIComponent(q)}`,
+  if (!STATIC_MODE) {
+    return getJSON<{ q: string; hits: SearchHit[]; total: number }>(
+      `/api/search?q=${encodeURIComponent(q)}`,
+    );
+  }
+
+  // 静态模式：全量索引在前端过滤。没有分词，只能做子串匹配。
+  searchIndex ??= await getJSON<SearchHit[]>(DATA("search.json"));
+  const needle = q.trim().toLowerCase();
+  if (!needle) return { q, hits: [], total: 0 };
+
+  const matched = searchIndex.filter((h) =>
+    `${h.title} ${h.snippet}`.toLowerCase().includes(needle),
   );
-  return data;
+
+  // 事件已经覆盖的文章不再重复列出
+  const eventTitles = new Set(matched.filter((h) => h.kind === "event").map((h) => h.title));
+  const hits = matched
+    .filter((h) => h.kind === "event" || !eventTitles.has(h.title))
+    .sort((a, b) => {
+      if (a.kind !== b.kind) return a.kind === "event" ? -1 : 1;
+      return Number(b.title.toLowerCase().includes(needle)) - Number(a.title.toLowerCase().includes(needle));
+    })
+    .slice(0, 20);
+
+  return { q, hits, total: hits.length };
 }
 
 /* ── 管理接口 ───────────────────────────────────────── */

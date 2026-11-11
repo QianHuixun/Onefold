@@ -34,7 +34,7 @@ export default function Footer({ onAdmin }: { onAdmin?: () => void }) {
         <div className="foot-col">
           <div className="foot-h">说明</div>
           <p className="foot-note">
-            每日 07:00 与 18:00 两次抓取。只收录公开发布的 RSS 内容，摘要由模型生成，事实以原文为准。
+            每天 00:00 抓取一次。只收录公开发布的 RSS 内容，摘要由模型生成，事实以原文为准。
           </p>
         </div>
       </div>

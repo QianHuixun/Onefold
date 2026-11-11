@@ -15,7 +15,7 @@ from datetime import UTC, datetime, timedelta
 
 import feedparser
 import httpx
-from sqlalchemy import delete
+from sqlalchemy import delete, func
 from sqlmodel import Session, select
 
 from .config import FETCH_TIMEOUT, USER_AGENT
@@ -378,6 +378,143 @@ def cmd_eval_export(args: argparse.Namespace) -> None:
     print(f"已导出到 {args.out}")
 
 
+def cmd_export(args: argparse.Namespace) -> None:
+    """把数据库导出成静态 JSON，供 GitHub Pages 这类纯静态托管使用。"""
+    import json
+
+    from .models import ArticleEvent
+
+    out = Path(args.out)
+    (out / "events").mkdir(parents=True, exist_ok=True)
+
+    def dump(name: str, payload: object) -> None:
+        (out / name).write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    init_db()
+    with Session(engine) as session:
+        topics = session.exec(select(Topic).order_by(Topic.id)).all()
+        topic_by_id = {t.id: t for t in topics}
+
+        events = session.exec(select(Event).order_by(Event.first_seen_at.desc())).all()
+        sources = {s.id: s.name for s in session.exec(select(Source)).all()}
+
+        article_rows = session.exec(
+            select(ArticleEvent, Article, ArticleEvent.similarity)
+            .join(Article, Article.id == ArticleEvent.article_id)
+            .order_by(ArticleEvent.similarity.desc())
+        ).all()
+
+        by_event: dict[int, list[tuple]] = {}
+        for link, article, sim in article_rows:
+            by_event.setdefault(link.event_id, []).append((article, sim))
+
+        def event_out(e: Event) -> dict:
+            topic = topic_by_id.get(e.topic_id)
+            articles = by_event.get(e.id, [])
+            names: list[str] = []
+            for a, _ in articles:
+                n = sources.get(a.source_id, "")
+                if n and n not in names:
+                    names.append(n)
+            return {
+                "id": e.id,
+                "title": e.title,
+                "summary": e.summary,
+                "summary_source": e.summary_source,
+                "topic_slug": topic.slug if topic else "",
+                "topic_name": topic.name if topic else "",
+                "first_seen_at": e.first_seen_at.isoformat(),
+                "last_seen_at": e.last_seen_at.isoformat(),
+                "article_count": e.article_count,
+                "source_count": e.source_count,
+                "sources": names,
+            }
+
+        items = [event_out(e) for e in events]
+        dump("events.json", {"items": items, "total": len(items), "offset": 0, "limit": len(items)})
+
+        for e in events:
+            detail = event_out(e)
+            detail["articles"] = [
+                {
+                    "id": a.id,
+                    "title": a.title,
+                    "url": a.url,
+                    "source_name": sources.get(a.source_id, ""),
+                    "published_at": a.published_at.isoformat() if a.published_at else None,
+                    "content_length": a.content_length,
+                    "similarity": round(float(sim), 2),
+                }
+                for a, sim in by_event.get(e.id, [])
+            ]
+            dump(f"events/{e.id}.json", detail)
+
+        dump("topics.json", [{"slug": t.slug, "name": t.name} for t in topics])
+
+        total_events = len(events)
+        total_articles = int(session.exec(select(func.count()).select_from(Article)).one())
+        enabled_sources = len([1 for s in session.exec(select(Source)).all() if s.enabled])
+        updated = session.exec(select(func.max(Event.last_seen_at))).one()
+        dump(
+            "stats.json",
+            {
+                "events": total_events,
+                "sources": enabled_sources,
+                "articles": total_articles,
+                "updated_at": updated.isoformat() if updated else None,
+            },
+        )
+
+        src_rows = session.exec(
+            select(Source, func.count(Article.id))
+            .join(Article, Article.source_id == Source.id, isouter=True)
+            .where(Source.enabled == True)  # noqa: E712
+            .group_by(Source.id)
+        ).all()
+        dump(
+            "sources.json",
+            [
+                {
+                    "name": s.name,
+                    "topic": topic_by_id[s.topic_id].name if s.topic_id in topic_by_id else "",
+                    "articles": int(n),
+                }
+                for s, n in src_rows
+            ],
+        )
+
+        index: list[dict] = []
+        for e in events:
+            index.append(
+                {
+                    "kind": "event",
+                    "id": e.id,
+                    "title": e.title,
+                    "snippet": e.summary,
+                    "source_name": "",
+                    "url": "",
+                    "published_at": e.first_seen_at.isoformat(),
+                }
+            )
+        for link, article, _sim in article_rows:
+            if article.status != "ok":
+                continue
+            index.append(
+                {
+                    "kind": "article",
+                    "id": article.id,
+                    "title": article.title,
+                    "snippet": (article.content or "")[:160],
+                    "source_name": sources.get(article.source_id, ""),
+                    "url": article.url,
+                    "published_at": article.published_at.isoformat() if article.published_at else None,
+                }
+            )
+        dump("search.json", index)
+
+    print(f"已导出到 {out}：{len(items)} 个事件、{len(index)} 条搜索记录")
+
+
 def cmd_reindex(_: argparse.Namespace) -> None:
     """重算分词列并重建索引。改了分词口径之后必须跑一次。"""
     from .search import reindex
@@ -556,6 +693,10 @@ def main() -> None:
 
     sub.add_parser("purge-demo", help="清掉演示数据残留").set_defaults(func=cmd_purge_demo)
     sub.add_parser("reindex", help="重建全文索引").set_defaults(func=cmd_reindex)
+
+    exp = sub.add_parser("export", help="导出静态 JSON（给 GitHub Pages 用）")
+    exp.add_argument("--out", default="web/public/data")
+    exp.set_defaults(func=cmd_export)
 
     eb = sub.add_parser("eval-build", help="生成待标注的文章对")
     eb.add_argument("--max-pairs", type=int, default=300)

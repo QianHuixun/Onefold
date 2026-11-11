@@ -63,6 +63,15 @@ cp .env.example .env      # 填 ONEFOLD_LLM_API_KEY
 
 发布到服务器：`./scripts/deploy.sh` + `scripts/provision.sh`，见 [docs/deploy.md](docs/deploy.md)。
 
+静态托管（GitHub Pages）：
+
+```bash
+.venv/bin/python -m app.cli export --out web/public/data   # 导出快照
+cd web && npm run build:static                              # 产出 web/dist
+```
+
+静态模式下前端只读 JSON，管理页与实验台不可用，搜索降级为前端子串匹配。
+
 Vite 已把 `/api` 代理到 `127.0.0.1:8000`，前端不需要处理跨域。
 
 ## 目录
