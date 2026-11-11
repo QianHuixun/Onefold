@@ -45,11 +45,13 @@
   .nav a.on{color:var(--ink)}
   .nav a.on:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:var(--ink)}
   .top-right{margin-left:auto;display:flex;align-items:center;gap:16px}
-  .search{display:flex;align-items:center;gap:8px;width:210px;height:34px;padding:0 2px;
-    border-bottom:1px solid rgba(255,255,255,.18);transition:border-color .2s,width .25s}
-  .search:focus-within{border-bottom-color:var(--ink)}
-  .search svg{flex-shrink:0;opacity:.5}
-  .search input{width:100%;border:0;background:none;outline:none;font-size:13px;color:var(--ink);letter-spacing:.02em}
+  .search{display:flex;align-items:center;gap:9px;width:236px;height:36px;padding:0 14px;
+    border:1px solid rgba(255,255,255,.16);border-radius:3px;background:rgba(255,255,255,.045);
+    cursor:text;transition:.22s}
+  .search:hover{border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.07)}
+  .search:focus-within{border-color:rgba(203,169,110,.7);background:rgba(255,255,255,.07)}
+  .search svg{flex-shrink:0;opacity:.6}
+  .search input{width:100%;border:0;background:none;outline:none;font-size:12.5px;color:var(--ink);letter-spacing:.02em}
   .search input::placeholder{color:var(--faint)}
   .icon-btn{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;color:var(--muted);transition:.2s}
   .icon-btn:hover{background:rgba(255,255,255,.07);color:var(--ink)}
@@ -463,6 +465,28 @@
   document.querySelectorAll('.chip').forEach(c => c.onclick = () => {
     document.querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
     c.classList.add('on');
+  });
+</script>
+
+<script>
+  // 顶栏搜索：回车跳到搜索页
+  document.querySelectorAll('.search input').forEach(inp => {
+    inp.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      const q = inp.value.trim();
+      if (!q) return;
+      if (document.body.dataset.page === 'search') {
+        const big = document.getElementById('q');
+        if (big) { big.value = q; }
+        history.replaceState(null, '', '?q=' + encodeURIComponent(q));
+        document.querySelectorAll('.ev-row h3, .art-row h3').forEach(el => {
+          el.innerHTML = el.textContent.replaceAll(q, '<mark>' + q + '</mark>');
+        });
+        window.scrollTo({top: 220, behavior: 'smooth'});
+      } else {
+        location.href = 'search-full-dark.html?q=' + encodeURIComponent(q);
+      }
+    });
   });
 </script>
 </body>
