@@ -9,6 +9,8 @@ open "design/prototype/home.html?variant=b"
 
 也可以用 `←` `→` 或底部胶囊切换。文件是纯 HTML + CSS，没有依赖，双击就行。
 
+底部还有一颗 **玻璃 · 开/关**：关掉就是不含毛玻璃的纯色版，用来对比。这个状态也能通过 URL 复现：`?variant=b&glass=0`。
+
 截图在 `screenshots/`，如果要贴进论文或给导师看，用这三张。
 
 ## 三个方向的区别（不是配色区别，是结构区别）
@@ -23,6 +25,39 @@ open "design/prototype/home.html?variant=b"
 
 可以混：B 的顶部（大数字日期 + 强分隔线）配 A 的衬线标题，是我个人觉得最好的组合。
 
+## 毛玻璃层
+
+毛玻璃不是给页面加一层 `backdrop-filter` 就有的。**玻璃必须糊在东西上**，底下是纯色的话，玻璃等于一块半透明色块，看不出是玻璃。
+
+所以结构分两层：
+
+```
+.scene   固定层：三团模糊光斑 + 细颗粒（毛玻璃要糊的就是它）
+  └ .sheet  内容玻璃板：半透明 + backdrop-filter: blur(30px) saturate(145%)
+```
+
+```css
+.scene{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.glow{position:absolute;border-radius:50%;filter:blur(110px)}
+
+.sheet{
+  background:rgba(252,250,246,.60);          /* 亮色：不低于 .5 */
+  border:1px solid rgba(255,255,255,.75);    /* 一圈高光边，玻璃的关键 */
+  -webkit-backdrop-filter:blur(30px) saturate(145%);
+  backdrop-filter:blur(30px) saturate(145%);
+  box-shadow:0 44px 90px -52px rgba(72,52,32,.5);
+}
+```
+
+四条注意事项：
+
+1. **光斑别超过三个色相。** 三团以内、低饱和、`blur(90–120px)`。色相一多就从"高级"掉到"极光壁纸"。
+2. **颗粒不能省。** 一层 `feTurbulence` 颗粒（opacity 3–5%）能消掉渐变的塑料感，这是"磨砂"和"渐变"的区别。
+3. **文字对比度会被吃掉。** 亮色玻璃的不透明度别低于 0.5，否则正文发灰；暗色玻璃用 `rgba(255,255,255,.04)` 配 `rgba(255,255,255,.09)` 的边。
+4. **性能。** `backdrop-filter` 在移动端和低端机上掉帧明显。只给整页板、固定导航、抽屉这类**大块固定区域**用，不要给每一行事件都加。所有用到的地方都套一层 `@supports` 降级。
+
+还有一个实际的坑：**暗色玻璃在投影仪上会发灰**，对比度比显示器上低一截。如果答辩选 C 方案，务必提前在真实投影上过一遍。
+
 ## 共用的视觉规范
 
 ### 颜色
@@ -31,11 +66,11 @@ open "design/prototype/home.html?variant=b"
 
 ```css
 /* A 编辑部 */
---bg:#FAF8F4;  --ink:#17140F;  --muted:#6E675C;  --line:#E3DCD1;  --accent:#9C3B26;
+--page:#EAE2D7;  --sheet:rgba(252,250,246,.60);  --ink:#17140F;  --muted:#6E675C;  --line:#E3DCD1;  --accent:#9C3B26;
 /* B 瑞士网格 */
---bg:#FFFFFF;  --ink:#0B0B0B;  --muted:#6B6B6B;  --line:#111111;  --accent:#E2482C;
+--page:#EAECEF;  --sheet:rgba(255,255,255,.62); --ink:#0B0B0B;  --muted:#6B6B6B;  --line:#111111;  --accent:#E2482C;
 /* C 暗色头条 */
---bg:#0C0C0E;  --ink:#E8E4DB;  --muted:#948F85;  --line:#1E1E21;  --accent:#C9A86A;
+--page:#070709;  --sheet:rgba(255,255,255,.035); --ink:#E8E4DB;  --muted:#948F85;  --line:#1E1E21;  --accent:#C9A86A;
 ```
 
 ### 字体
