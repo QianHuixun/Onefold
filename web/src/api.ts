@@ -186,3 +186,25 @@ export const evalLabel = (token: string, id: number, label: number) =>
 
 export const evalMetrics = (token: string) =>
   adminRequest<EvalMetrics>("/api/admin/eval/metrics", token);
+
+/* ── 人工纠错（F14）───────────────────────────────── */
+
+export const detachArticle = (token: string, eventId: number, articleId: number) =>
+  adminRequest<{ event_id: number }>(
+    `/api/admin/events/${eventId}/articles/${articleId}/detach`,
+    token,
+    { method: "POST" },
+  );
+
+export const mergeEvent = (token: string, eventId: number, targetId: number) =>
+  adminRequest<{ target_id: number; moved: number }>(`/api/admin/events/${eventId}/merge`, token, {
+    method: "POST",
+    body: { target_id: targetId },
+  });
+
+export const moveArticle = (token: string, eventId: number, articleId: number, targetId: number) =>
+  adminRequest<{ event_id: number }>(
+    `/api/admin/events/${eventId}/articles/${articleId}/move`,
+    token,
+    { method: "POST", body: { event_id: targetId } },
+  );

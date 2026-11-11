@@ -1,16 +1,52 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { fetchEvent } from "../api";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { detachArticle, fetchEvent, mergeEvent } from "../api";
 import { useEventFlags } from "../store";
 import type { EventDetail as Detail } from "../types";
 import { clock, dayLabel } from "../time";
+import MergeDialog from "../components/MergeDialog";
 
 export default function EventPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const eventId = Number(id);
   const [data, setData] = useState<Detail | null>(null);
   const [error, setError] = useState("");
   const { read, starred, markRead, toggleStar } = useEventFlags();
+  const token = localStorage.getItem("onefold_admin_token") ?? "";
+  const [correcting, setCorrecting] = useState(
+    new URLSearchParams(location.search).get("fix") === "1",
+  );
+  const [merging, setMerging] = useState(false);
+  const [flash, setFlash] = useState("");
+
+  const reload = () => {
+    fetchEvent(eventId).then(setData).catch(() => undefined);
+  };
+
+  const handleDetach = async (articleId: number) => {
+    if (!token) return;
+    if (!confirm("把这条报道拆成独立事件？原来的事件会少一家来源。")) return;
+    try {
+      const res = await detachArticle(token, eventId, articleId);
+      setFlash(`已拆成新事件 #${res.event_id}`);
+      reload();
+    } catch (exc) {
+      setFlash(exc instanceof Error ? exc.message : "拆分失败");
+    }
+  };
+
+  const handleMerge = async (targetId: number) => {
+    if (!token) return;
+    try {
+      await mergeEvent(token, eventId, targetId);
+      setMerging(false);
+      setFlash("已合并，正在跳转");
+      setTimeout(() => navigate(`/e/${targetId}`), 600);
+    } catch (exc) {
+      setFlash(exc instanceof Error ? exc.message : "合并失败");
+    }
+  };
 
   useEffect(() => {
     let alive = true;
@@ -79,6 +115,14 @@ export default function EventPage() {
               >
                 {starred.has(data.id) ? "★ 已收藏" : "☆ 收藏"}
               </button>
+              {token && (
+                <button
+                  className={`event-star ${correcting ? "on" : ""}`}
+                  onClick={() => setCorrecting(!correcting)}
+                >
+                  {correcting ? "退出纠错" : "纠错"}
+                </button>
+              )}
             </div>
           </header>
 
@@ -91,9 +135,21 @@ export default function EventPage() {
             <blockquote className="sum-text">{data.summary}</blockquote>
 
             <div className="sec-head">
-              <h2>{data.source_count} 家媒体怎么说</h2>
-              <span>按与事件中心的相似度排序</span>
+              <h2>
+                {data.source_count === data.article_count
+                  ? `${data.source_count} 家媒体怎么说`
+                  : `${data.article_count} 篇报道怎么说`}
+              </h2>
+              {correcting ? (
+                <button className="btn" onClick={() => setMerging(true)}>
+                  整个事件合并到…
+                </button>
+              ) : (
+                <span>按与事件中心的相似度排序</span>
+              )}
             </div>
+
+            {flash && <p className="admin-ok">{flash}</p>}
 
             {data.articles.map((a) => (
               <div className="src-row" key={a.id}>
@@ -108,13 +164,28 @@ export default function EventPage() {
                   </div>
                 </div>
                 <div className="src-sim">{a.similarity.toFixed(2)}</div>
-                <a className="src-open" href={a.url} target="_blank" rel="noopener noreferrer">
-                  原文 ↗
-                </a>
+                <div className="src-actions">
+                  <a className="src-open" href={a.url} target="_blank" rel="noopener noreferrer">
+                    原文 ↗
+                  </a>
+                  {correcting && data.articles.length > 1 && (
+                    <button className="link danger" onClick={() => handleDetach(a.id)}>
+                      拆出
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         </>
+      )}
+
+      {merging && data && (
+        <MergeDialog
+          currentId={data.id}
+          onClose={() => setMerging(false)}
+          onPick={handleMerge}
+        />
       )}
     </section>
   );

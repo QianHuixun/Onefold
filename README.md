@@ -107,6 +107,9 @@ data/       SQLite 与快照（不进版本库）
 | DELETE | `/api/admin/sources/{id}` | 删除（有文章时拒绝，改用停用） |
 | POST | `/api/admin/fetch` | 后台触发一次抓取 |
 | GET | `/api/admin/fetch-log` | 最近抓取记录 |
+| POST | `/api/admin/events/{id}/articles/{aid}/detach` | 拆出文章，单独成事件 |
+| POST | `/api/admin/events/{id}/articles/{aid}/move` | 把文章移到别的事件 |
+| POST | `/api/admin/events/{id}/merge` | 整个事件并入另一个 |
 | GET | `/api/admin/eval/pairs` | 待标注的文章对 |
 | POST | `/api/admin/eval/pairs/{id}` | 提交标注 |
 | GET | `/api/admin/eval/metrics` | 阈值扫描与 P/R/F1 |
