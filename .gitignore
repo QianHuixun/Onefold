@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# 环境变量与密钥
+.env
+.env.*
+!.env.example
+
+# 数据与日志
+data/*.db
+data/*.db-journal
+data/*.sqlite3
+data/snapshots/
+*.log
+
+# 编辑器
+.idea/
+.vscode/
