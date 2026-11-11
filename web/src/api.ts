@@ -84,3 +84,59 @@ export const triggerFetch = (token: string, limit = 10) =>
 
 export const fetchLogs = (token: string) =>
   adminRequest<FetchLogItem[]>("/api/admin/fetch-log?limit=12", token);
+
+/* ── 阈值实验台 ─────────────────────────────────────── */
+
+export type EvalPair = {
+  id: number;
+  similarity: number;
+  label: number | null;
+  auto: boolean;
+  a_title: string;
+  a_source: string;
+  a_time: string | null;
+  a_excerpt: string;
+  b_title: string;
+  b_source: string;
+  b_time: string | null;
+  b_excerpt: string;
+};
+
+export type EvalSummary = {
+  total: number;
+  labeled: number;
+  auto_labeled: number;
+  positives: number;
+  negatives: number;
+  topics: string[];
+};
+
+export type MetricPoint = {
+  threshold: number;
+  precision: number;
+  recall: number;
+  f1: number;
+  tp: number;
+  fp: number;
+  fn: number;
+};
+
+export type EvalMetrics = {
+  points: MetricPoint[];
+  best_threshold: number | null;
+  best_f1: number;
+  labeled: number;
+  positives: number;
+};
+
+export const evalSummary = (token: string) =>
+  adminRequest<EvalSummary>("/api/admin/eval/summary", token);
+
+export const evalPairs = (token: string, limit = 10) =>
+  adminRequest<EvalPair[]>(`/api/admin/eval/pairs?limit=${limit}`, token);
+
+export const evalLabel = (token: string, id: number, label: number) =>
+  adminRequest<unknown>(`/api/admin/eval/pairs/${id}`, token, { method: "POST", body: { label } });
+
+export const evalMetrics = (token: string) =>
+  adminRequest<EvalMetrics>("/api/admin/eval/metrics", token);

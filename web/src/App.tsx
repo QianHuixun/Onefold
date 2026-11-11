@@ -6,6 +6,7 @@ import IndexNav from "./components/IndexNav";
 import Rail from "./components/Rail";
 import SearchPalette from "./components/SearchPalette";
 import AdminPanel from "./components/AdminPanel";
+import EvalPanel from "./components/EvalPanel";
 import EventDetail from "./components/EventDetail";
 import TopBar from "./components/TopBar";
 import { fetchEvents, fetchStats } from "./api";
@@ -20,7 +21,7 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [initialQuery, setInitialQuery] = useState("");
   const [detailId, setDetailId] = useState<number | null>(null);
-  const [view, setView] = useState<"home" | "admin">("home");
+  const [view, setView] = useState<"home" | "admin" | "eval">("home");
 
   useEffect(() => {
     let alive = true;
@@ -40,6 +41,7 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get("admin") === "1") setView("admin");
+    if (params.get("eval") === "1") setView("eval");
     const q = params.get("q");
     if (q) {
       setInitialQuery(q);
@@ -123,8 +125,10 @@ export default function App() {
       <TopBar topics={topics} active={topic} onTopic={setTopic} onOpenSearch={() => setSearchOpen(true)} />
 
       <main className="plate">
-        {view === "admin" ? (
-          <AdminPanel topics={topics} />
+        {view === "eval" ? (
+          <EvalPanel />
+        ) : view === "admin" ? (
+          <AdminPanel topics={topics} onEval={() => setView("eval")} />
         ) : state === "loading" ? (
           <div className="state">正在取今日事件…</div>
         ) : state === "error" ? (
@@ -186,7 +190,7 @@ export default function App() {
         )}
       </main>
 
-      <Footer onAdmin={() => setView(view === "admin" ? "home" : "admin")} />
+      <Footer onAdmin={() => setView(view === "home" ? "admin" : "home")} />
 
       <SearchPalette
         open={searchOpen}

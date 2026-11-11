@@ -13,9 +13,9 @@ import { shortTime } from "../time";
 
 const TOKEN_KEY = "onefold_admin_token";
 
-type Props = { topics: { slug: string; name: string }[] };
+type Props = { topics: { slug: string; name: string }[]; onEval?: () => void };
 
-export default function AdminPanel({ topics }: Props) {
+export default function AdminPanel({ topics, onEval }: Props) {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) ?? "");
   const [draft, setDraft] = useState(token);
   const [sources, setSources] = useState<AdminSource[]>([]);
@@ -115,6 +115,9 @@ export default function AdminPanel({ topics }: Props) {
             disabled={busy}
           >
             立即抓取
+          </button>
+          <button className="btn" onClick={onEval}>
+            实验台
           </button>
           <button className="btn solid" onClick={() => setToken("")}>
             退出

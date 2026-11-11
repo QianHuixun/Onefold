@@ -94,3 +94,20 @@ class FetchLog(SQLModel, table=True):
     new_count: int = 0
     dup_count: int = 0
     error: str = ""
+
+
+class EvalPair(SQLModel, table=True):
+    """人工标注对：两篇文章是否同一事件。阈值实验台用。"""
+
+    __tablename__ = "eval_pair"
+
+    id: int | None = Field(default=None, primary_key=True)
+    topic_id: int = Field(foreign_key="topic.id", index=True)
+    article_a: int = Field(foreign_key="article.id", index=True)
+    article_b: int = Field(foreign_key="article.id", index=True)
+    similarity: float = 0.0
+    # None 未标注；1 同一事件；0 不是
+    label: int | None = None
+    # 自动预标注的对，需要人工复核
+    auto: bool = False
+    created_at: datetime = Field(default_factory=utcnow)

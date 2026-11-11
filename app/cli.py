@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+from pathlib import Path
 import time
 from datetime import UTC, datetime, timedelta
 
@@ -340,6 +341,43 @@ def _run_fetch(session: Session, limit: int) -> dict[str, int]:
     return stats
 
 
+def cmd_eval_build(args: argparse.Namespace) -> None:
+    from .eval import build_pairs
+
+    init_db()
+    with Session(engine) as session:
+        stats = build_pairs(session, args.max_pairs, args.min_similarity)
+        print(f"候选对 {stats['candidates']} 组，新建 {stats['created']} 组")
+
+
+def cmd_eval_autolabel(args: argparse.Namespace) -> None:
+    from .eval import autolabel
+
+    init_db()
+    with Session(engine) as session:
+        n = autolabel(session, args.overlap)
+        print(f"自动预标注 {n} 组（按标题词重叠度，需人工复核）")
+
+
+def cmd_eval_fixture(args: argparse.Namespace) -> None:
+    from .eval import make_fixture
+
+    init_db()
+    with Session(engine) as session:
+        stats = make_fixture(session, args.count)
+        print(f"夹具：新建重复稿 {stats['created']} 篇（status=eval，不进首页）")
+
+
+def cmd_eval_export(args: argparse.Namespace) -> None:
+    from .eval import export_metrics
+
+    init_db()
+    with Session(engine) as session:
+        text = export_metrics(session)
+    Path(args.out).write_text(text, encoding="utf-8")
+    print(f"已导出到 {args.out}")
+
+
 def cmd_purge_demo(_: argparse.Namespace) -> None:
     """清掉演示残留：demo 文章、只含 demo 文章的事件、没有 Feed 的空源。"""
     init_db()
@@ -498,6 +536,23 @@ def main() -> None:
     pipe.set_defaults(func=cmd_pipeline)
 
     sub.add_parser("purge-demo", help="清掉演示数据残留").set_defaults(func=cmd_purge_demo)
+
+    eb = sub.add_parser("eval-build", help="生成待标注的文章对")
+    eb.add_argument("--max-pairs", type=int, default=300)
+    eb.add_argument("--min-similarity", type=float, default=0.08)
+    eb.set_defaults(func=cmd_eval_build)
+
+    ea = sub.add_parser("eval-autolabel", help="按标题重叠做自动预标注（需复核）")
+    ea.add_argument("--overlap", type=float, default=0.55)
+    ea.set_defaults(func=cmd_eval_autolabel)
+
+    ef = sub.add_parser("eval-fixture", help="生成已知答案的评测夹具（status=eval，不上首页）")
+    ef.add_argument("--count", type=int, default=12)
+    ef.set_defaults(func=cmd_eval_fixture)
+
+    ee = sub.add_parser("eval-export", help="导出阈值曲线 JSON")
+    ee.add_argument("--out", default="docs/eval-metrics.json")
+    ee.set_defaults(func=cmd_eval_export)
 
     fetch = sub.add_parser("fetch", help="抓取所有启用的源")
     fetch.add_argument("--limit", type=int, default=10, help="每个源最多取几条")

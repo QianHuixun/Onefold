@@ -97,8 +97,11 @@ data/       SQLite 与快照（不进版本库）
 | DELETE | `/api/admin/sources/{id}` | 删除（有文章时拒绝，改用停用） |
 | POST | `/api/admin/fetch` | 后台触发一次抓取 |
 | GET | `/api/admin/fetch-log` | 最近抓取记录 |
+| GET | `/api/admin/eval/pairs` | 待标注的文章对 |
+| POST | `/api/admin/eval/pairs/{id}` | 提交标注 |
+| GET | `/api/admin/eval/metrics` | 阈值扫描与 P/R/F1 |
 
-管理页在页脚「管理入口」，或直接访问 `/?admin=1`。
+管理页在页脚「管理入口」或 `/?admin=1`，阈值实验台在 `/?eval=1`。实验台用法与口径见 [docs/eval.md](docs/eval.md)。
 
 ## 快捷键
 
