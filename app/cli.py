@@ -154,6 +154,28 @@ def cmd_init(_: argparse.Namespace) -> None:
     print("建表完成")
 
 
+def cmd_bootstrap(_: argparse.Namespace) -> None:
+    """生产环境初始化：只建主题和数据源，不灌演示数据。"""
+    init_db()
+    with Session(engine) as session:
+        for slug, name, desc in TOPICS:
+            if not session.exec(select(Topic).where(Topic.slug == slug)).first():
+                session.add(Topic(slug=slug, name=name, description=desc, config_json="{}"))
+        session.commit()
+
+        topics = {t.slug: t for t in session.exec(select(Topic)).all()}
+        added = 0
+        for name, feed, slug in SOURCES:
+            if session.exec(select(Source).where(Source.name == name)).first():
+                continue
+            session.add(Source(topic_id=topics[slug].id, name=name, feed_url=feed))
+            added += 1
+        session.commit()
+
+        total = len(session.exec(select(Source)).all())
+        print(f"主题 {len(topics)} 个，数据源 {total} 个（本次新增 {added}）")
+
+
 def cmd_seed(args: argparse.Namespace) -> None:
     init_db()
     with Session(engine) as session:
@@ -420,6 +442,8 @@ def main() -> None:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("init", help="建表").set_defaults(func=cmd_init)
+
+    sub.add_parser("bootstrap", help="建主题与数据源（不灌演示数据）").set_defaults(func=cmd_bootstrap)
 
     seed = sub.add_parser("seed", help="灌示例数据")
     seed.add_argument("--force", action="store_true", help="清空后重灌")

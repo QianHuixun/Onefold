@@ -16,7 +16,7 @@ async function getJSON<T>(url: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export const fetchEvents = () => getJSON<EventPage>("/api/events?limit=40");
+export const fetchEvents = () => getJSON<EventPage>("/api/events?limit=100");
 export const fetchStats = () => getJSON<Stats>("/api/stats");
 export const fetchEvent = (id: number) => getJSON<EventDetail>(`/api/events/${id}`);
 

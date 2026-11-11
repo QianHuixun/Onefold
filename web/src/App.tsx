@@ -134,7 +134,7 @@ export default function App() {
                 topics={topics}
                 active={topic}
                 counts={counts}
-                total={events.length}
+                total={stats?.events ?? events.length}
                 sources={stats?.sources ?? 0}
                 onTopic={setTopic}
               />
