@@ -50,6 +50,15 @@ cp .env.example .env      # 填 ONEFOLD_LLM_API_KEY
 
 管道细节、阈值与已知局限见 [docs/pipeline.md](docs/pipeline.md)。
 
+每天 00:00 自动跑整条链路：
+
+```bash
+./scripts/install_cron.sh       # 写入 crontab
+.venv/bin/python -m app.cli report   # 看每个源最近一次抓取
+```
+
+定时方案、systemd timer、日志与补跑见 [docs/scheduling.md](docs/scheduling.md)。
+
 Vite 已把 `/api` 代理到 `127.0.0.1:8000`，前端不需要处理跨域。
 
 ## 目录

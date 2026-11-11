@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import time
 from datetime import UTC, datetime, timedelta
 
 import feedparser
@@ -230,69 +231,150 @@ def cmd_seed(args: argparse.Namespace) -> None:
         print(f"灌入 {len(DEMO_EVENTS)} 个事件、{len(sources)} 个来源")
 
 
+def _get_feed(url: str) -> "httpx.Response":
+    """带一次重试的 GET：新闻站的超时和 5xx 大多是瞬时的。"""
+    last: Exception | None = None
+    for attempt in range(2):
+        try:
+            return httpx.get(
+                url,
+                headers={"User-Agent": USER_AGENT, "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8"},
+                timeout=FETCH_TIMEOUT,
+                follow_redirects=True,
+            )
+        except httpx.HTTPError as exc:
+            last = exc
+            time.sleep(1.5 * (attempt + 1))
+    assert last is not None
+    raise last
+
+
+def _fetch_source(session: Session, src: Source, limit: int) -> tuple[int, int]:
+    """抓一个源，返回 (新增, 重复)。失败会抛异常，由调用方记账。"""
+    resp = _get_feed(src.feed_url)
+    resp.raise_for_status()
+    feed = feedparser.parse(resp.content)
+
+    new = dup = 0
+    for entry in feed.entries[:limit]:
+        url = entry.get("link", "")
+        if not url:
+            continue
+        url_hash = _hash(url)
+        if session.exec(select(Article).where(Article.url_hash == url_hash)).first():
+            dup += 1
+            continue
+        summary = entry.get("summary", "") or ""
+        published = None
+        if entry.get("published_parsed"):
+            published = datetime(*entry.published_parsed[:6], tzinfo=UTC)
+        session.add(
+            Article(
+                topic_id=src.topic_id,
+                source_id=src.id,
+                title=entry.get("title", "").strip(),
+                url=url,
+                url_hash=url_hash,
+                content=summary,
+                content_length=len(summary),
+                published_at=published,
+                search_text=tokenize(entry.get("title", "") + " " + summary),
+            )
+        )
+        new += 1
+    session.commit()
+    return new, dup
+
+
+def _run_fetch(session: Session, limit: int) -> dict[str, int]:
+    sources = session.exec(select(Source).where(Source.enabled == True)).all()  # noqa: E712
+    stats = {"sources": len(sources), "new": 0, "dup": 0, "failed": 0}
+    if not sources:
+        print("没有启用的源")
+        return stats
+
+    for src in sources:
+        log = FetchLog(source_id=src.id)
+        session.add(log)
+        session.commit()
+        try:
+            new, dup = _fetch_source(session, src, limit)
+            log.new_count, log.dup_count = new, dup
+            src.last_fetch_at = utcnow()
+            src.fail_count = 0
+            stats["new"] += new
+            stats["dup"] += dup
+            print(f"  {src.name}: 新增 {new}，重复 {dup}")
+        except Exception as exc:  # noqa: BLE001
+            log.error = str(exc)[:200]
+            src.fail_count += 1
+            stats["failed"] += 1
+            print(f"  {src.name}: 失败 {type(exc).__name__} {str(exc)[:80]}")
+        finally:
+            log.finished_at = utcnow()
+            session.add(log)
+            session.add(src)
+            session.commit()
+    return stats
+
+
 def cmd_fetch(args: argparse.Namespace) -> None:
     init_db()
     with Session(engine) as session:
-        sources = session.exec(select(Source).where(Source.enabled == True)).all()  # noqa: E712
-        if not sources:
-            print("没有启用的源")
+        print("抓取：")
+        _run_fetch(session, args.limit)
+
+
+def cmd_daily(args: argparse.Namespace) -> None:
+    """定时任务入口：抓取 → 抽取 → 去重 → 聚类 → 摘要，一次跑完。"""
+    from .pipeline import cluster_pending, dedup_pending, extract_pending, summarize_pending
+
+    started = time.time()
+    init_db()
+    print(f"[{datetime.now(LOCAL_TZ):%Y-%m-%d %H:%M}] 每日运行开始")
+
+    with Session(engine) as session:
+        fetch_stats = _run_fetch(session, args.limit)
+        extract_stats = extract_pending(session, args.extract_limit)
+        dedup_stats = dedup_pending(session)
+        cluster_stats = cluster_pending(session)
+        summary_stats = summarize_pending(session)
+
+    elapsed = time.time() - started
+    print(
+        f"抓取 {fetch_stats['sources']} 个源：新增 {fetch_stats['new']}，重复 {fetch_stats['dup']}，"
+        f"失败 {fetch_stats['failed']}"
+    )
+    print(f"抽取 {extract_stats['ok']}/{extract_stats['tried']} 篇")
+    print(f"去重：检查 {dedup_stats['checked']}，判重 {dedup_stats['dup']}")
+    print(f"聚类：新事件 {cluster_stats['new_events']}，并入 {cluster_stats['joined']}")
+    print(
+        f"摘要 {int(summary_stats['events'])} 条：模型 {int(summary_stats['llm'])}，"
+        f"抽取 {int(summary_stats['extractive'])}，花费 ¥{summary_stats['cost']}"
+    )
+    print(f"完成，用时 {elapsed:.1f}s")
+
+
+def cmd_report(args: argparse.Namespace) -> None:
+    """看最近几次抓取的情况，排查坏源用。"""
+    init_db()
+    with Session(engine) as session:
+        rows = session.exec(
+            select(FetchLog, Source.name)
+            .join(Source, Source.id == FetchLog.source_id)
+            .order_by(FetchLog.started_at.desc())
+            .limit(args.limit)
+        ).all()
+        if not rows:
+            print("还没有抓取记录")
             return
-        for src in sources:
-            log = FetchLog(source_id=src.id)
-            session.add(log)
-            session.commit()
-            try:
-                resp = httpx.get(
-                    src.feed_url,
-                    headers={"User-Agent": USER_AGENT, "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8"},
-                    timeout=FETCH_TIMEOUT,
-                    follow_redirects=True,
-                )
-                resp.raise_for_status()
-                feed = feedparser.parse(resp.content)
-                new = dup = 0
-                for entry in feed.entries[: args.limit]:
-                    url = entry.get("link", "")
-                    if not url:
-                        continue
-                    url_hash = _hash(url)
-                    if session.exec(select(Article).where(Article.url_hash == url_hash)).first():
-                        dup += 1
-                        continue
-                    summary = entry.get("summary", "") or ""
-                    published = None
-                    if entry.get("published_parsed"):
-                        published = datetime(*entry.published_parsed[:6], tzinfo=UTC)
-                    session.add(
-                        Article(
-                            topic_id=src.topic_id,
-                            source_id=src.id,
-                            title=entry.get("title", "").strip(),
-                            url=url,
-                            url_hash=url_hash,
-                            content=summary,
-                            content_length=len(summary),
-                            published_at=published,
-                            search_text=tokenize(entry.get("title", "") + " " + summary),
-                        )
-                    )
-                    new += 1
-                log.new_count, log.dup_count = new, dup
-                log.finished_at = utcnow()
-                src.last_fetch_at = utcnow()
-                src.fail_count = 0
-                session.add(log)
-                session.add(src)
-                session.commit()
-                print(f"{src.name}: 新增 {new}，重复 {dup}")
-            except Exception as exc:  # noqa: BLE001
-                log.error = str(exc)[:200]
-                log.finished_at = utcnow()
-                src.fail_count += 1
-                session.add(log)
-                session.add(src)
-                session.commit()
-                print(f"{src.name}: 失败 {exc}")
+        print(f"{'时间':<17}{'来源':<12}{'新增':>4}{'重复':>4}  状态")
+        for log, name in rows:
+            status = "OK" if not log.error else f"FAIL {log.error[:40]}"
+            print(
+                f"{log.started_at.astimezone(LOCAL_TZ):%m-%d %H:%M}    "
+                f"{name:<12}{log.new_count:>4}{log.dup_count:>4}  {status}"
+            )
 
 
 def cmd_summarize(args: argparse.Namespace) -> None:
@@ -356,6 +438,15 @@ def main() -> None:
     fetch = sub.add_parser("fetch", help="抓取所有启用的源")
     fetch.add_argument("--limit", type=int, default=10, help="每个源最多取几条")
     fetch.set_defaults(func=cmd_fetch)
+
+    daily = sub.add_parser("daily", help="每日任务：抓取 → 抽取 → 去重 → 聚类 → 摘要")
+    daily.add_argument("--limit", type=int, default=10, help="每个源最多取几条")
+    daily.add_argument("--extract-limit", type=int, default=60, help="本轮最多抽取多少篇正文")
+    daily.set_defaults(func=cmd_daily)
+
+    report = sub.add_parser("report", help="查看最近的抓取记录")
+    report.add_argument("--limit", type=int, default=20)
+    report.set_defaults(func=cmd_report)
 
     args = parser.parse_args()
     args.func(args)

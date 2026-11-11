@@ -15,7 +15,8 @@ venv/
 .env.*
 !.env.example
 
-# 数据与日志（数据库、快照都不进版本库）
+# 数据与日志（数据库、快照、运行日志都不进版本库）
+logs/
 data/*
 !data/.gitkeep
 *.log
