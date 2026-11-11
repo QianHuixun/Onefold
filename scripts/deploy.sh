@@ -2,8 +2,8 @@
 # 把本地代码发布到服务器：构建前端 → 同步 → 重启 API。
 set -euo pipefail
 
-HOST="${ONEFOLD_HOST:-junxun@junxun.lan.zhili-edu.com}"
-KEY="${ONEFOLD_SSH_KEY:-$HOME/.ssh/id_ed25519_junxundhd}"
+HOST="${ONEFOLD_HOST:?请先 export ONEFOLD_HOST=user@your-server}"
+KEY="${ONEFOLD_SSH_KEY:-$HOME/.ssh/id_ed25519}"
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$DIR"
 
@@ -27,4 +27,4 @@ ssh -i "$KEY" "$HOST" '
   sudo systemctl restart onefold-api &&
   sleep 1 && systemctl is-active onefold-api
 '
-echo "完成：http://junxun.lan.zhili-edu.com"
+echo "完成：http://$HOST"

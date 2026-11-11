@@ -1,80 +1,124 @@
 # 部署
 
-跑在 `junxun@junxun.lan.zhili-edu.com`（192.168.2.103）上，Ubuntu 26.04 / 4 核 15G。
+**目标服务器待定。** 之前部署在公司配发的机器上，已按要求撤下（服务停用、站点下线，文件保留）。
 
-```
-http://junxun.lan.zhili-edu.com     ← 局域网内可访问
-http://192.168.2.103                ← 同一个站，用 IP 也能开
-```
-
-## 结构
-
-| 位置 | 作用 |
-| --- | --- |
-| `~/onefold` | 代码 + 虚拟环境 + SQLite + `.env` |
-| `/var/www/onefold` | 前端静态文件（nginx 直接伺服） |
-| `127.0.0.1:8000` | uvicorn，只监听本机，不对外 |
-| `/etc/nginx/sites-available/onefold` | 反代配置 |
-
-nginx 承担两件事：`/` 出静态文件，`/api/` 反代到 uvicorn。所以浏览器只跟 80 端口打交道，没有跨域问题。
-
-## 服务
+确定服务器后，两条命令完成部署：
 
 ```bash
-systemctl status onefold-api          # API 服务
-systemctl restart onefold-api         # 改后端后重启
-journalctl -u onefold-api -n 50       # 后端日志
+# 1 本地：同步代码与前端
+export ONEFOLD_HOST=user@your-server        # SSH 免密登录
+./scripts/deploy.sh
 
-systemctl list-timers onefold-daily.timer   # 定时任务
-systemctl start onefold-daily               # 立刻手动跑一次
-tail -f ~/onefold/logs/daily.log            # 每日任务日志
+# 2 服务器：初始化系统
+ssh user@your-server 'cd ~/onefold && ONEFOLD_DOMAIN=your.domain ./scripts/provision.sh'
 ```
 
-`onefold-daily.timer` 每天 **00:00（服务器本地时间 CST）** 触发，`Persistent=true` 表示宕机错过会补跑。
+`provision.sh` 会装依赖、建 venv、初始化数据、写 systemd 服务、配 nginx（含限流），并跑一次健康检查。
+
+## 服务器要求
+
+| 项 | 最低 | 说明 |
+| --- | --- | --- |
+| 系统 | Ubuntu 22.04+ / Debian 12+ | 其它发行版要改 apt 命令 |
+| Python | 3.11+ | 3.12 最稳 |
+| 内存 | 1G | 抓取时峰值 300M 左右 |
+| 磁盘 | 10G | 主要是 venv 和依赖 |
+| 软件 | nginx + systemd | `provision.sh` 会装 |
+
+不需要 Docker，不需要 Node（前端在本地构建好再推上去）。
+
+## 架构
+
+```
+Nginx :80  ──/       → /var/www/onefold（静态文件）
+           ──/api/   → 127.0.0.1:8000（uvicorn）
+systemd    onefold-api        常驻，挂了自动重启
+           onefold-daily.timer  每天 00:00 跑抓取 + 管道
+```
+
+API 只监听 127.0.0.1，公网拿不到，必须经过 nginx。这样限流、日志、TLS 都集中在 nginx 一层。
+
+## 域名与备案（重要）
+
+服务器放在哪里，决定你要不要备案：
+
+| 位置 | 备案 | 能立刻用 | 中国大陆访问 |
+| --- | --- | --- | --- |
+| 中国大陆（阿里云/腾讯云） | **需要 ICP 备案**，约 1–3 周 | 否 | 最快 |
+| 香港 / 新加坡 / 日本 | 不需要 | 是 | 50–150ms，可用 |
+
+毕设有时限，如果不想等备案，选境外轻量服务器即可，`provision.sh` 不用改。
+
+域名建议 `.com` 或 `.news`，一年几十块。买了之后把 DNS 的 A 记录指向服务器 IP。
+
+## 每日任务
+
+```bash
+systemctl list-timers onefold-daily.timer   # 下次触发时间
+systemctl start onefold-daily               # 手动跑一次
+tail -f ~/onefold/logs/daily.log            # 日志
+```
+
+`Persistent=true`：机器半夜关机，开机后会补跑。
 
 ## 更新
-
-本地改完代码，一条命令推上去：
 
 ```bash
 ./scripts/deploy.sh
 ```
 
-它做四件事：构建前端 → rsync 代码 → 同步 `dist` 到 `/var/www/onefold` → 重启 API。
+构建前端 → rsync 代码 → 同步静态文件 → 重启 API。`data/`、`.env`、`.venv`、`logs/` 不会被覆盖。
 
-`data/`、`.env`、`.venv`、`node_modules`、`logs/` 都在排除列表里，不会被覆盖或删除。
+## 安全基线
 
-## 首次部署做了什么
+`provision.sh` 里已经包含的：
+
+- `server_tokens off`，不回显 nginx 版本
+- API 路径限流 30 r/s，burst 60
+- API 只监听 127.0.0.1
+- 静态资源 30 天缓存
+
+还需要你自己做的：
 
 ```bash
-# 1 依赖
-sudo apt install python3.14-venv nginx
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+# 防火墙：只放行 22 和 80
+sudo ufw allow 22/tcp
+sudo ufw allow 80/tcp
+sudo ufw enable
 
-# 2 数据
-.venv/bin/python -m app.cli bootstrap        # 建主题与 5 个源，不灌演示数据
-.venv/bin/python -m app.cli daily            # 抓一次并跑完整管道
-
-# 3 服务
-systemctl enable --now onefold-api onefold-daily.timer
+# TLS：有域名之后
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d your.domain
 ```
 
-`bootstrap` 和 `seed` 的区别：`seed` 会灌 8 个假事件用于看效果，生产环境不能用；`bootstrap` 只建主题和源。
+## 备份（还没做）
 
-## 已备份 / 未备份
-
-**还没做备份。** SQLite 是单文件，`cp` 一下就是完整备份，加一条 timer 就行：
+SQLite 是单文件，复制即备份：
 
 ```bash
-# 每天 00:30 存一份，保留 7 天
+# 每天 00:30 备份，保留 7 天
 0 30 * * * cp ~/onefold/data/onefold.db ~/onefold/data/backup-$(date +\%F).db && find ~/onefold/data -name "backup-*.db" -mtime +7 -delete
 ```
 
-建议在 M6 健壮性阶段一起做，配合「数据库异常时首页降级到快照」。
+建议和 M6 的「快照降级」一起做。
 
-## 已知限制
+## 撤下旧服务器时做了什么
 
-1. **只有 HTTP，没有 HTTPS。** 局域网域名没有证书，现在明文传输。等买了公网域名、配了 TLS 再说。
-2. **只能局域网访问。** 要让公网打开（PRD 的 G3 目标），需要公网 IP 或内网穿透，再加域名。
-3. **仓库是私有的，服务器上没有 git。** 走 rsync 而不是 `git pull`，所以服务器上的代码没有版本历史，回溯靠本地仓库。
-4. **API 没有任何鉴权。** 现在全是只读接口，问题不大；一旦加管理接口（F01），必须先做 Token 校验和限流。
+公司那台机器上：
+
+```bash
+sudo systemctl disable --now onefold-daily.timer onefold-api.service
+sudo rm /etc/nginx/sites-enabled/onefold /etc/nginx/sites-available/onefold
+sudo systemctl reload nginx
+```
+
+文件保留在 `~/onefold`（269M，含 venv）和 `/var/www/onefold`（500K），彻底删除：
+
+```bash
+rm -rf ~/onefold /var/www/onefold
+sudo rm -f /etc/systemd/system/onefold-{api,daily}.{service,timer}
+sudo rm -f /etc/nginx/conf.d/onefold-limit.conf
+sudo systemctl daemon-reload
+```
+
+nginx 本身是那次部署装的，留着不影响，也可以 `sudo apt remove nginx`。

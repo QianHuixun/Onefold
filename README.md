@@ -6,7 +6,7 @@
 
 ## 状态
 
-**已部署**：<http://junxun.lan.zhili-edu.com>（局域网，Ubuntu 26.04）。每天 00:00 自动抓取、聚类、生成摘要。
+前后端已在本地跑通，部署目标服务器待定（原先部署在公司机器上，已撤下）。
 
 M0 完成 · 前后端骨架跑通。首页已经从 `/api/events` 读真实数据，八个事件、二十个来源是种子数据。
 产品需求见 [docs/PRD.md](docs/PRD.md)（Word 版：[docs/PRD.docx](docs/PRD.docx)）。
@@ -61,7 +61,7 @@ cp .env.example .env      # 填 ONEFOLD_LLM_API_KEY
 
 定时方案、systemd timer、日志与补跑见 [docs/scheduling.md](docs/scheduling.md)。
 
-发布到服务器：`./scripts/deploy.sh`，部署细节见 [docs/deploy.md](docs/deploy.md)。
+发布到服务器：`./scripts/deploy.sh` + `scripts/provision.sh`，见 [docs/deploy.md](docs/deploy.md)。
 
 Vite 已把 `/api` 代理到 `127.0.0.1:8000`，前端不需要处理跨域。
 
