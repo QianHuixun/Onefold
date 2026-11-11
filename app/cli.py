@@ -142,13 +142,10 @@ def _hash(url: str) -> str:
 
 
 def tokenize(text: str) -> str:
-    """jieba 分词，供 FTS5 使用；没装就原样返回。"""
-    try:
-        import jieba
+    """jieba 分词，供 FTS5 与向量化共用；没装就原样返回。"""
+    from .pipeline.vectors import tokens
 
-        return " ".join(jieba.cut(text))
-    except Exception:  # noqa: BLE001
-        return text
+    return " ".join(tokens(text))
 
 
 def cmd_init(_: argparse.Namespace) -> None:
@@ -209,7 +206,7 @@ def cmd_seed(args: argparse.Namespace) -> None:
                     session.commit()
                     sources[src_name] = placeholder
 
-                url = f"https://example.com/{topic.slug}/{event.id}/{i}"
+                url = f"demo://{topic.slug}/{event.id}/{i}"
                 article = Article(
                     topic_id=topic.id,
                     source_id=sources[src_name].id,
@@ -220,6 +217,7 @@ def cmd_seed(args: argparse.Namespace) -> None:
                     content_length=len(spec["summary"]) * 3,
                     published_at=seen + timedelta(minutes=i * 6),
                     search_text=tokenize(title + " " + spec["summary"]),
+                    status="demo",
                 )
                 session.add(article)
                 session.commit()
@@ -297,6 +295,31 @@ def cmd_fetch(args: argparse.Namespace) -> None:
                 print(f"{src.name}: 失败 {exc}")
 
 
+def cmd_pipeline(args: argparse.Namespace) -> None:
+    from .pipeline import cluster_pending, dedup_pending, extract_pending, summarize_pending
+
+    init_db()
+    with Session(engine) as session:
+        if args.rebuild:
+            # 清掉真实数据聚出来的事件，保留种子（demo）事件
+            demo_ids = set(
+                session.exec(select(ArticleEvent.event_id).join(Article, Article.id == ArticleEvent.article_id)
+                             .where(Article.status == "demo")).all()
+            )
+            for event in session.exec(select(Event)).all():
+                if event.id in demo_ids:
+                    continue
+                session.exec(delete(ArticleEvent).where(ArticleEvent.event_id == event.id))
+                session.delete(event)
+            session.commit()
+            print("已清空自动聚出来的事件")
+        if not args.skip_extract:
+            print("抽取正文:", extract_pending(session, args.limit))
+        print("文章去重:", dedup_pending(session))
+        print("事件聚类:", cluster_pending(session))
+        print("生成摘要:", summarize_pending(session))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="onefold")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -306,6 +329,12 @@ def main() -> None:
     seed = sub.add_parser("seed", help="灌示例数据")
     seed.add_argument("--force", action="store_true", help="清空后重灌")
     seed.set_defaults(func=cmd_seed)
+
+    pipe = sub.add_parser("pipeline", help="抽取 → 去重 → 聚类 → 摘要")
+    pipe.add_argument("--limit", type=int, default=60, help="每轮最多处理多少篇")
+    pipe.add_argument("--skip-extract", action="store_true", help="跳过正文抽取")
+    pipe.add_argument("--rebuild", action="store_true", help="先清空自动聚出来的事件再重跑")
+    pipe.set_defaults(func=cmd_pipeline)
 
     fetch = sub.add_parser("fetch", help="抓取所有启用的源")
     fetch.add_argument("--limit", type=int, default=10, help="每个源最多取几条")

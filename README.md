@@ -33,11 +33,15 @@ npm install
 npm run dev                                    # http://127.0.0.1:5173
 ```
 
-抓取真实 RSS：
+抓取真实 RSS，再跑数据管道：
 
 ```bash
-.venv/bin/python -m app.cli fetch --limit 10
+.venv/bin/python -m app.cli fetch --limit 10      # 抓
+.venv/bin/python -m app.cli pipeline              # 抽取 → 去重 → 聚类 → 摘要
+.venv/bin/python -m pytest tests -q               # 管道测试
 ```
+
+管道细节、阈值与已知局限见 [docs/pipeline.md](docs/pipeline.md)。
 
 Vite 已把 `/api` 代理到 `127.0.0.1:8000`，前端不需要处理跨域。
 
@@ -46,7 +50,8 @@ Vite 已把 `/api` 代理到 `127.0.0.1:8000`，前端不需要处理跨域。
 ```
 app/        后端：models / api / cli / db
 web/        前端：React + Vite
-docs/       PRD（Markdown 为准，docx 为交付版）
+docs/       PRD（Markdown 为准，docx 为交付版）+ 管道说明
+tests/      管道测试（pytest）
 design/     视觉规范与四个页面的 HTML 原型（暗色）
 scripts/    探针与文档生成脚本
 data/       SQLite 与快照（不进版本库）
