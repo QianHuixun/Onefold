@@ -85,7 +85,7 @@ data/       SQLite 与快照（不进版本库）
 | GET | `/api/events/{id}` | 事件详情，含多源文章与相似度 |
 | GET | `/api/topics` | 主题列表 |
 | GET | `/api/stats` | 事件数、来源数、最后更新时间 |
-| GET | `/api/search?q=` | 事件与文章检索 |
+| GET | `/api/search?q=` | 事件与文章检索（FTS5 + jieba 预分词） |
 
 管理接口（需 `X-Admin-Token` 请求头，值取自 `.env` 的 `ONEFOLD_ADMIN_TOKEN`）：
 
@@ -101,7 +101,7 @@ data/       SQLite 与快照（不进版本库）
 | POST | `/api/admin/eval/pairs/{id}` | 提交标注 |
 | GET | `/api/admin/eval/metrics` | 阈值扫描与 P/R/F1 |
 
-管理页在页脚「管理入口」或 `/?admin=1`，阈值实验台在 `/?eval=1`。实验台用法与口径见 [docs/eval.md](docs/eval.md)。
+管理页在页脚「管理入口」或 `/?admin=1`，阈值实验台在 `/?eval=1`。实验台用法与口径见 [docs/eval.md](docs/eval.md)，中文检索方案见 [docs/search.md](docs/search.md)。
 
 ## 快捷键
 

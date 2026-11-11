@@ -160,19 +160,28 @@ def search(
                       published_at=e.first_seen_at)
         )
 
-    rows = session.exec(
-        select(Article, Source)
-        .join(Source, Source.id == Article.source_id)
-        .where(Article.title.like(like))
-        .order_by(Article.published_at.desc()).limit(limit)
-    ).all()
-    for a, s in rows:
+    from .search import search_articles
+
+    # 事件已经命中的话，它下面的文章不再重复出现
+    linked: set[int] = set()
+    if events:
+        linked = {
+            int(x)
+            for x in session.exec(
+                select(ArticleEvent.article_id).where(
+                    ArticleEvent.event_id.in_([e.id for e in events])
+                )
+            ).all()
+        }
+
+    for a, s in search_articles(session, q, limit):
+        if a.id in linked:
+            continue
         hits.append(
             SearchHit(kind="article", id=a.id, title=a.title,
-                      snippet=a.content[:160], source_name=s.name, url=a.url,
+                      snippet=a.content[:160], source_name=s.name if s else "", url=a.url,
                       published_at=a.published_at)
         )
 
-    # 事件和文章混在一起时按时间倒序，和列表页一致
-    hits.sort(key=lambda h: h.published_at or datetime(1970, 1, 1, tzinfo=UTC), reverse=True)
+    # 事件按时间在前，文章按相关度在后：搜索里相关度比时间重要
     return SearchOut(q=q, hits=hits[:limit], total=len(hits))

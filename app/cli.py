@@ -378,6 +378,25 @@ def cmd_eval_export(args: argparse.Namespace) -> None:
     print(f"已导出到 {args.out}")
 
 
+def cmd_reindex(_: argparse.Namespace) -> None:
+    """重算分词列并重建索引。改了分词口径之后必须跑一次。"""
+    from .search import reindex
+
+    init_db()
+    with Session(engine) as session:
+        articles = session.exec(select(Article)).all()
+        changed = 0
+        for article in articles:
+            fresh = tokenize(f"{article.title} {article.content[:2000]}")
+            if fresh != article.search_text:
+                article.search_text = fresh
+                session.add(article)
+                changed += 1
+        session.commit()
+        total = reindex(session)
+        print(f"重算分词 {changed} 篇，索引 {total} 条")
+
+
 def cmd_purge_demo(_: argparse.Namespace) -> None:
     """清掉演示残留：demo 文章、只含 demo 文章的事件、没有 Feed 的空源。"""
     init_db()
@@ -536,6 +555,7 @@ def main() -> None:
     pipe.set_defaults(func=cmd_pipeline)
 
     sub.add_parser("purge-demo", help="清掉演示数据残留").set_defaults(func=cmd_purge_demo)
+    sub.add_parser("reindex", help="重建全文索引").set_defaults(func=cmd_reindex)
 
     eb = sub.add_parser("eval-build", help="生成待标注的文章对")
     eb.add_argument("--max-pairs", type=int, default=300)

@@ -30,6 +30,12 @@ def init_db() -> None:
     SQLModel.metadata.create_all(engine)
     _add_missing_columns()
 
+    # 全文索引与三支同步触发器
+    from .search import ensure_fts
+
+    with Session(engine) as session:
+        ensure_fts(session)
+
 
 def _add_missing_columns() -> None:
     """create_all 不会给已有表加列，这里做一次轻量迁移。"""
