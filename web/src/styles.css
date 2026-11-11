@@ -168,6 +168,10 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .event:first-of-type { padding-top: 4px; }
 .event-top { display: flex; align-items: center; gap: 10px; font-size: 10.5px; letter-spacing: 0.16em; color: var(--faint); text-transform: uppercase; margin-bottom: 9px; }
 .event-top .k { color: var(--accent); }
+.event-top .read-tag {
+  font-size: 9px; letter-spacing: 0.14em; color: var(--faint);
+  border: 1px solid rgba(255, 255, 255, 0.12); padding: 1px 5px; margin-left: 4px;
+}
 .event h2 {
   font-family: var(--serif); font-size: clamp(1.35rem, 1.2vw, 1.6rem); line-height: 1.5;
   font-weight: 600; letter-spacing: 0.01em; max-width: var(--measure);
@@ -178,8 +182,15 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .event-foot { display: flex; align-items: center; gap: 12px; margin-top: 13px; font-size: 11.5px; color: var(--faint); letter-spacing: 0.05em; }
 .srcs { opacity: 0; transition: opacity 0.3s; color: var(--accent); }
 .event:hover .srcs { opacity: 1; }
-.star { position: absolute; right: 0; top: 28px; font-size: 14px; color: #3e3b36; opacity: 0; transition: 0.2s; }
+.star {
+  position: absolute; right: 0; top: 26px; font-size: 15px; color: #3e3b36;
+  opacity: 0; transition: 0.2s; padding: 2px 4px; line-height: 1;
+}
 .event:hover .star { opacity: 1; }
+.star.on { opacity: 1; color: var(--accent); }
+.event.is-read h2 { color: var(--faint); }
+.event.is-read p { color: #6f6a62; }
+.event.is-read:hover h2 { color: var(--accent); }
 .day-break { display: flex; align-items: center; gap: 16px; margin: 38px 0 6px; font-size: 11px; letter-spacing: 0.24em; color: var(--faint); }
 .day-break::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 
@@ -429,3 +440,15 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .curve-svg .axis { font-family: var(--mono); font-size: 9px; fill: var(--faint); }
 .curve-slider { width: min(820px, 100%); margin: 10px 0 18px; accent-color: #cba96e; }
 .admin-table tr.row-active td { background: rgba(203, 169, 110, 0.07); color: var(--ink); }
+
+
+/* ── 列表筛选（未读 / 收藏）── */
+.feed-filters { display: flex; gap: 14px; align-items: baseline; margin-top: 12px; }
+.ff {
+  font-size: 11.5px; letter-spacing: 0.08em; color: var(--faint);
+  padding: 2px 0; border-bottom: 1px solid transparent; transition: 0.2s;
+}
+.ff:hover { color: var(--ink); }
+.ff.on { color: var(--ink); border-bottom-color: var(--accent); }
+.ff .n { font-family: var(--mono); font-size: 10px; color: var(--faint); margin-left: 3px; }
+.ff.export { margin-left: auto; color: var(--accent); }

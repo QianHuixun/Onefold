@@ -11,6 +11,7 @@ import EventDetail from "./components/EventDetail";
 import TopBar from "./components/TopBar";
 import { fetchEvents, fetchStats } from "./api";
 import type { EventItem, Stats } from "./types";
+import { useEventFlags } from "./store";
 import { clock, dayKey, dayLabel, todayLabel } from "./time";
 
 export default function App() {
@@ -22,6 +23,8 @@ export default function App() {
   const [initialQuery, setInitialQuery] = useState("");
   const [detailId, setDetailId] = useState<number | null>(null);
   const [view, setView] = useState<"home" | "admin" | "eval">("home");
+  const [feedFilter, setFeedFilter] = useState<"all" | "unread" | "starred">("all");
+  const { read, starred, markRead, toggleStar, exportStarred } = useEventFlags();
 
   useEffect(() => {
     let alive = true;
@@ -86,18 +89,23 @@ export default function App() {
     return m;
   }, [events]);
 
-  const visible = useMemo(
+  const scoped = useMemo(
     () => (topic ? events.filter((e) => e.topic_slug === topic) : events),
     [events, topic],
   );
 
+  const visible = useMemo(() => {
+    if (feedFilter === "unread") return scoped.filter((e) => !read.has(e.id));
+    if (feedFilter === "starred") return scoped.filter((e) => starred.has(e.id));
+    return scoped;
+  }, [scoped, feedFilter, read, starred]);
+
   const hero = useMemo(
     () =>
-      visible.reduce<EventItem | null>(
+      (feedFilter !== "all" ? null : visible.reduce<EventItem | null>(
         (best, e) => (!best || e.article_count > best.article_count ? e : best),
-        null,
-      ),
-    [visible],
+        null)),
+    [visible, feedFilter],
   );
 
   const rest = useMemo(() => visible.filter((e) => e.id !== hero?.id), [visible, hero]);
@@ -137,7 +145,7 @@ export default function App() {
           </div>
         ) : (
           <>
-            {hero && <Hero event={hero} onOpen={setDetailId} />}
+            {hero && <Hero event={hero} onOpen={(id) => { markRead(id); setDetailId(id); }} />}
             <div className="grid">
               <IndexNav
                 topics={topics}
@@ -155,6 +163,32 @@ export default function App() {
                     <div className="day-sub">
                       {visible.length} 个事件 · 更新于 {stats?.updated_at ? clock(stats.updated_at) : "—"}
                     </div>
+                  <div className="feed-filters">
+                    <button
+                      className={`ff ${feedFilter === "all" ? "on" : ""}`}
+                      onClick={() => setFeedFilter("all")}
+                    >
+                      全部
+                    </button>
+                    <button
+                      className={`ff ${feedFilter === "unread" ? "on" : ""}`}
+                      onClick={() => setFeedFilter("unread")}
+                    >
+                      未读 <span className="n">{scoped.filter((e) => !read.has(e.id)).length}</span>
+                    </button>
+                    <button
+                      className={`ff ${feedFilter === "starred" ? "on" : ""}`}
+                      onClick={() => setFeedFilter("starred")}
+                    >
+                      收藏 <span className="n">{starred.size}</span>
+                    </button>
+                    {starred.size > 0 && (
+                      <button className="ff export" onClick={exportStarred}>
+                        导出
+                      </button>
+                    )}
+                  </div>
+
                   </div>
                   <div className="chips">
                     <button className={`chip ${topic === "" ? "on" : ""}`} onClick={() => setTopic("")}>
@@ -176,12 +210,30 @@ export default function App() {
                   <div key={g.key}>
                     {gi > 0 && <div className="day-break">{g.label}</div>}
                     {g.items.map((e) => (
-                      <EventRow key={e.id} event={e} onOpen={setDetailId} />
+                      <EventRow
+                      key={e.id}
+                      event={e}
+                      read={read.has(e.id)}
+                      starred={starred.has(e.id)}
+                      onOpen={(id) => {
+                        markRead(id);
+                        setDetailId(id);
+                      }}
+                      onStar={toggleStar}
+                    />
                     ))}
                   </div>
                 ))}
 
-                {rest.length === 0 && <p className="empty-note">这个主题今天还没有事件。</p>}
+                {rest.length === 0 && (
+                  <p className="empty-note">
+                    {feedFilter === "unread"
+                      ? "都读完了。"
+                      : feedFilter === "starred"
+                        ? "还没有收藏。点事件右上角的星标试试。"
+                        : "这个主题今天还没有事件。"}
+                  </p>
+                )}
               </div>
 
               <Rail stats={stats} events={visible} />
