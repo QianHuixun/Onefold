@@ -86,6 +86,7 @@ data/       SQLite 与快照（不进版本库）
 | GET | `/api/topics` | 主题列表 |
 | GET | `/api/stats` | 事件数、来源数、最后更新时间 |
 | GET | `/api/search?q=` | 事件与文章检索（FTS5 + jieba 预分词） |
+| GET | `/api/sources` | 公开的来源列表（不含 feed 地址） |
 
 管理接口（需 `X-Admin-Token` 请求头，值取自 `.env` 的 `ONEFOLD_ADMIN_TOKEN`）：
 
@@ -109,6 +110,7 @@ data/       SQLite 与快照（不进版本库）
 | `/topic/:slug` | 按主题过滤（`ai` / `tech`） |
 | `/e/:id` | 事件详情，可分享、可刷新 |
 | `/search?q=` | 搜索结果 |
+| `/about` | 关于：定位、流程、数据来源、免责 |
 | `/admin` | 数据源管理 |
 | `/admin/eval` | 阈值实验台 |
 

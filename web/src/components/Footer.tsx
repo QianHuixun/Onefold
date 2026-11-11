@@ -26,7 +26,7 @@ export default function Footer({ onAdmin }: { onAdmin?: () => void }) {
           <ul>
             <li>RSS 订阅</li>
             <li>GitHub</li>
-            <li>关于本站</li>
+            <li><a href="/about">关于本站</a></li>
             <li onClick={onAdmin}>管理入口</li>
           </ul>
         </div>

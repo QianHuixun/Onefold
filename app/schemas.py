@@ -68,3 +68,9 @@ class SearchOut(BaseModel):
     q: str
     hits: list[SearchHit]
     total: int
+
+
+class SourcePublic(BaseModel):
+    name: str
+    topic: str
+    articles: int

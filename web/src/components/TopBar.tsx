@@ -30,6 +30,9 @@ export default function TopBar({ topics, active, onTopic, onOpenSearch }: Props)
               {t.name}
             </a>
           ))}
+          <a href="/about" className={window.location.pathname === "/about" ? "on" : ""}>
+            关于
+          </a>
         </nav>
 
         <div className="top-right">

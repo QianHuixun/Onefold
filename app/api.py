@@ -17,6 +17,7 @@ from .schemas import (
     EventPage,
     SearchHit,
     SearchOut,
+    SourcePublic,
     StatsOut,
     TopicOut,
 )
@@ -130,6 +131,20 @@ def get_event(event_id: int, session: Session = Depends(get_session)):
         sources=[a.source_name for a in articles],
         articles=articles,
     )
+
+
+@router.get("/sources", response_model=list[SourcePublic])
+def list_public_sources(session: Session = Depends(get_session)):
+    """关于页用：只暴露来源名、主题和文章数，不给 feed 地址。"""
+    rows = session.exec(
+        select(Source, Topic, func.count(Article.id))
+        .join(Topic, Topic.id == Source.topic_id)
+        .join(Article, Article.source_id == Source.id, isouter=True)
+        .where(Source.enabled == True)  # noqa: E712
+        .group_by(Source.id, Topic.id)
+        .order_by(func.count(Article.id).desc())
+    ).all()
+    return [SourcePublic(name=s.name, topic=t.name, articles=int(n)) for s, t, n in rows]
 
 
 @router.get("/stats", response_model=StatsOut)

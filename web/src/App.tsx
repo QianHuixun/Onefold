@@ -4,6 +4,7 @@ import Footer from "./components/Footer";
 import SearchPalette from "./components/SearchPalette";
 import TopBar from "./components/TopBar";
 import { fetchTopics } from "./api";
+import AboutPage from "./pages/AboutPage";
 import AdminPage from "./pages/AdminPage";
 import EvalPage from "./pages/EvalPage";
 import EventPage from "./pages/EventPage";
@@ -76,6 +77,7 @@ export default function App() {
           <Route path="/topic/:slug" element={<Home onTopicChange={setActiveTopic} />} />
           <Route path="/e/:id" element={<EventPage />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/about" element={<AboutPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/admin/eval" element={<EvalPage />} />
           <Route path="*" element={<div className="state">这一页还没有做。</div>} />
