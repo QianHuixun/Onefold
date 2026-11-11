@@ -26,3 +26,15 @@ export type Stats = {
   articles: number;
   updated_at: string | null;
 };
+
+export type ArticleItem = {
+  id: number;
+  title: string;
+  url: string;
+  source_name: string;
+  published_at: string | null;
+  content_length: number;
+  similarity: number;
+};
+
+export type EventDetail = EventItem & { articles: ArticleItem[] };

@@ -1,4 +1,4 @@
-import type { EventPage, Stats } from "./types";
+import type { EventDetail, EventPage, Stats } from "./types";
 
 export type SearchHit = {
   kind: "event" | "article";
@@ -6,6 +6,7 @@ export type SearchHit = {
   title: string;
   snippet: string;
   source_name: string;
+  url: string;
   published_at: string | null;
 };
 
@@ -17,6 +18,7 @@ async function getJSON<T>(url: string): Promise<T> {
 
 export const fetchEvents = () => getJSON<EventPage>("/api/events?limit=40");
 export const fetchStats = () => getJSON<Stats>("/api/stats");
+export const fetchEvent = (id: number) => getJSON<EventDetail>(`/api/events/${id}`);
 
 export async function fetchSearch(q: string) {
   const data = await getJSON<{ q: string; hits: SearchHit[]; total: number }>(

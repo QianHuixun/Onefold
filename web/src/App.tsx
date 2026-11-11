@@ -5,6 +5,7 @@ import EventRow from "./components/EventRow";
 import IndexNav from "./components/IndexNav";
 import Rail from "./components/Rail";
 import SearchPalette from "./components/SearchPalette";
+import EventDetail from "./components/EventDetail";
 import TopBar from "./components/TopBar";
 import { fetchEvents, fetchStats } from "./api";
 import type { EventItem, Stats } from "./types";
@@ -17,6 +18,7 @@ export default function App() {
   const [topic, setTopic] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [initialQuery, setInitialQuery] = useState("");
+  const [detailId, setDetailId] = useState<number | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -34,12 +36,23 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const q = new URLSearchParams(location.search).get("q");
+    const params = new URLSearchParams(location.search);
+    const q = params.get("q");
     if (q) {
       setInitialQuery(q);
       setSearchOpen(true);
     }
+    const ev = params.get("event");
+    if (ev) setDetailId(Number(ev));
   }, []);
+
+  // 浮层打开时锁住页面滚动
+  useEffect(() => {
+    document.body.style.overflow = searchOpen || detailId ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [searchOpen, detailId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -47,7 +60,10 @@ export default function App() {
         e.preventDefault();
         setSearchOpen(true);
       }
-      if (e.key === "Escape") setSearchOpen(false);
+      if (e.key === "Escape") {
+        setSearchOpen(false);
+        setDetailId(null);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -112,7 +128,7 @@ export default function App() {
           </div>
         ) : (
           <>
-            {hero && <Hero event={hero} />}
+            {hero && <Hero event={hero} onOpen={setDetailId} />}
             <div className="grid">
               <IndexNav
                 topics={topics}
@@ -151,7 +167,7 @@ export default function App() {
                   <div key={g.key}>
                     {gi > 0 && <div className="day-break">{g.label}</div>}
                     {g.items.map((e) => (
-                      <EventRow key={e.id} event={e} />
+                      <EventRow key={e.id} event={e} onOpen={setDetailId} />
                     ))}
                   </div>
                 ))}
@@ -167,7 +183,18 @@ export default function App() {
 
       <Footer />
 
-      <SearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} initialQuery={initialQuery} />
+      <SearchPalette
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        initialQuery={initialQuery}
+        onSelect={(hit) => {
+          setSearchOpen(false);
+          if (hit.kind === "event") setDetailId(hit.id);
+          else if (hit.url) window.open(hit.url, "_blank", "noopener");
+        }}
+      />
+
+      {detailId !== null && <EventDetail id={detailId} onClose={() => setDetailId(null)} />}
     </>
   );
 }

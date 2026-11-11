@@ -167,7 +167,7 @@ def search(
     for a, s in rows:
         hits.append(
             SearchHit(kind="article", id=a.id, title=a.title,
-                      snippet=a.content[:160], source_name=s.name,
+                      snippet=a.content[:160], source_name=s.name, url=a.url,
                       published_at=a.published_at)
         )
 

@@ -1,7 +1,7 @@
 import type { EventItem } from "../types";
 import { clock, dayLabel } from "../time";
 
-export default function Hero({ event }: { event: EventItem }) {
+export default function Hero({ event, onOpen }: { event: EventItem; onOpen: (id: number) => void }) {
   return (
     <section className="hero">
       <div className="eyebrow">
@@ -21,9 +21,9 @@ export default function Hero({ event }: { event: EventItem }) {
         </span>
         <span className="dot" />
         <span className="hero-srcs">{event.sources.join(" · ")}</span>
-        <a className="hero-go" href="#">
+        <button className="hero-go" onClick={() => onOpen(event.id)}>
           阅读事件 <span>→</span>
-        </a>
+        </button>
       </div>
     </section>
   );

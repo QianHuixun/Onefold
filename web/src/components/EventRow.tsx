@@ -1,9 +1,9 @@
 import type { EventItem } from "../types";
 import { clock, dayLabel } from "../time";
 
-export default function EventRow({ event }: { event: EventItem }) {
+export default function EventRow({ event, onOpen }: { event: EventItem; onOpen: (id: number) => void }) {
   return (
-    <article className="event">
+    <article className="event" onClick={() => onOpen(event.id)}>
       <span className="star">☆</span>
       <div className="event-top">
         <span className="k">{event.topic_name}</span>

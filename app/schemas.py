@@ -59,6 +59,7 @@ class SearchHit(BaseModel):
     title: str
     snippet: str
     source_name: str = ""
+    url: str = ""
     published_at: datetime | None = None
 
 
