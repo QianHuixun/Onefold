@@ -325,8 +325,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .detail-meta b { color: var(--accent); font-weight: 600; }
 .detail-sum-label {
-  margin-top: 26px; font-size: 10.5px; letter-spacing: 0.18em;
-  color: var(--faint); text-transform: uppercase;
+  margin-top: 26px; font-size: 10.5px; letter-spacing: 0.14em;
+  color: var(--faint);
 }
 .detail-sum {
   margin-top: 10px; padding-left: 22px; border-left: 2px solid var(--accent);
