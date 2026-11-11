@@ -295,6 +295,19 @@ def cmd_fetch(args: argparse.Namespace) -> None:
                 print(f"{src.name}: 失败 {exc}")
 
 
+def cmd_summarize(args: argparse.Namespace) -> None:
+    from .pipeline.summarize import summarize_pending
+
+    init_db()
+    with Session(engine) as session:
+        stats = summarize_pending(session, force=args.force)
+        print(
+            f"摘要 {int(stats['events'])} 条：模型 {int(stats['llm'])}，抽取式 {int(stats['extractive'])}；"
+            f"tokens 入 {int(stats['tokens_in'])} / 出 {int(stats['tokens_out'])}，"
+            f"估算花费 ¥{stats['cost']}"
+        )
+
+
 def cmd_pipeline(args: argparse.Namespace) -> None:
     from .pipeline import cluster_pending, dedup_pending, extract_pending, summarize_pending
 
@@ -329,6 +342,10 @@ def main() -> None:
     seed = sub.add_parser("seed", help="灌示例数据")
     seed.add_argument("--force", action="store_true", help="清空后重灌")
     seed.set_defaults(func=cmd_seed)
+
+    summ = sub.add_parser("summarize", help="给事件生成一句话摘要")
+    summ.add_argument("--force", action="store_true", help="重写全部事件的摘要")
+    summ.set_defaults(func=cmd_summarize)
 
     pipe = sub.add_parser("pipeline", help="抽取 → 去重 → 聚类 → 摘要")
     pipe.add_argument("--limit", type=int, default=60, help="每轮最多处理多少篇")

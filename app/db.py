@@ -28,6 +28,18 @@ def init_db() -> None:
     from . import models  # noqa: F401  确保表已注册
 
     SQLModel.metadata.create_all(engine)
+    _add_missing_columns()
+
+
+def _add_missing_columns() -> None:
+    """create_all 不会给已有表加列，这里做一次轻量迁移。"""
+    with engine.connect() as conn:
+        existing = {row[1] for row in conn.exec_driver_sql("PRAGMA table_info('event')")}
+        if existing and "summary_source" not in existing:
+            conn.exec_driver_sql(
+                "ALTER TABLE event ADD COLUMN summary_source VARCHAR NOT NULL DEFAULT ''"
+            )
+            conn.commit()
 
 
 def get_session() -> Generator[Session, None, None]:

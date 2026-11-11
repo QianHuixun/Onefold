@@ -4,6 +4,7 @@ export type EventItem = {
   id: number;
   title: string;
   summary: string;
+  summary_source: string;
   topic_slug: string;
   topic_name: string;
   first_seen_at: string;

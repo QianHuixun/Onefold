@@ -35,17 +35,28 @@ SimHash 64 位指纹，汉明距离 ≤ 3 判为转载重复，状态置为 `dup
 {"cosine_threshold": 0.35, "time_window_hours": 24}
 ```
 
-## 4 摘要
+## 4 摘要（DeepSeek）
 
-有 `ONEFOLD_LLM_API_KEY` 就走 OpenAI 兼容接口（默认 DeepSeek），提示词限定「只陈述报道里出现过的事实」。
-
-没有密钥时降级为抽取式：取最接近事件中心那篇报道的首句，截 60 字。降级结果不是模型写的，展示时不要冒充。
+调用 DeepSeek 的 OpenAI 兼容接口，`deepseek-chat`，只要一句、不超过 60 字，提示词限定「只陈述材料里出现过的事实」。
 
 ```bash
-export ONEFOLD_LLM_API_KEY=sk-...
-export ONEFOLD_LLM_BASE_URL=https://api.deepseek.com/v1
-export ONEFOLD_LLM_MODEL=deepseek-chat
+cp .env.example .env
+# 填 ONEFOLD_LLM_API_KEY=sk-...
+.venv/bin/python -m app.cli summarize --force
 ```
+
+没有密钥或调用失败时降级为抽取式（取最接近事件中心那篇的首句），并把来源写进 `event.summary_source`：
+
+- `deepseek-chat` → 前端显示「AI 摘要 · deepseek-chat」
+- `extractive` → 前端显示「抽取式摘要」，不冒充模型写的
+
+命令会打印 token 数与估算花费：
+
+```
+摘要 33 条：模型 33，抽取式 0；tokens 入 41200 / 出 3300，估算花费 ¥0.048
+```
+
+成本对应的 PRD 指标是 ≤5 元/天。按每天 40 个事件、每个事件 6 篇 700 字材料估算，一天大约 0.3–0.6 元，留了一到两个数量级的余量。
 
 ## 实测（2026-11-11）
 

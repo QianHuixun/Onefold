@@ -41,6 +41,13 @@ npm run dev                                    # http://127.0.0.1:5173
 .venv/bin/python -m pytest tests -q               # 管道测试
 ```
 
+摘要走 DeepSeek，配置写进 `.env`（模板见 `.env.example`）：
+
+```bash
+cp .env.example .env      # 填 ONEFOLD_LLM_API_KEY
+.venv/bin/python -m app.cli summarize --force
+```
+
 管道细节、阈值与已知局限见 [docs/pipeline.md](docs/pipeline.md)。
 
 Vite 已把 `/api` 代理到 `127.0.0.1:8000`，前端不需要处理跨域。

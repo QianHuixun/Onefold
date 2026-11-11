@@ -62,6 +62,11 @@ export default function EventDetail({ id, onClose }: { id: number; onClose: () =
               )}
             </div>
 
+            <div className="detail-sum-label">
+              {data.summary_source && data.summary_source !== "extractive"
+                ? `AI 摘要 · ${data.summary_source}`
+                : "抽取式摘要 · 取最接近事件中心那篇的首句"}
+            </div>
             <blockquote className="detail-sum">{data.summary}</blockquote>
 
             <div className="detail-src-head">

@@ -16,6 +16,7 @@ class EventOut(BaseModel):
     id: int
     title: str
     summary: str
+    summary_source: str = ""
     topic_slug: str
     topic_name: str
     first_seen_at: datetime

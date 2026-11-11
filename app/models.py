@@ -67,6 +67,8 @@ class Event(SQLModel, table=True):
     topic_id: int = Field(foreign_key="topic.id", index=True)
     title: str
     summary: str = ""
+    # 摘要来源：deepseek-chat / extractive / ""
+    summary_source: str = Field(default="", max_length=40)
     first_seen_at: datetime = Field(default_factory=utcnow, index=True)
     last_seen_at: datetime = Field(default_factory=utcnow)
     article_count: int = 0
