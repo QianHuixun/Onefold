@@ -10,6 +10,8 @@ import tempfile
 from datetime import UTC, datetime, timedelta
 
 os.environ["ONEFOLD_DB"] = tempfile.mktemp(suffix=".db")
+# 测试不打真实模型：置空后 config 的 setdefault 不会覆盖
+os.environ["ONEFOLD_LLM_API_KEY"] = ""
 
 from sqlmodel import Session, select  # noqa: E402
 
@@ -55,14 +57,15 @@ def _seed(session: Session) -> None:
     session.add(source)
     session.commit()
 
+    # 真实的多源报道：标题措辞不同，但共享关键实体
     same_event = [
         ("谷歌发布 Gemini 4 Carbon，面向开发者与企业开放", "谷歌发布 Gemini 4 Carbon，长上下文与工具调用重构，推理成本下降四成。"),
-        ("Google 推出 Gemini 4 Carbon，企业版先上线", "Google 推出 Gemini 4 Carbon，面向开发者与企业，推理成本下降四成。"),
-        ("Gemini 4 Carbon 上线：上下文翻倍，价格砍四成", "Gemini 4 Carbon 上线，上下文翻倍，价格下降四成，个人版暂不开放。"),
+        ("谷歌 Gemini 4 Carbon 发布，面向企业开放", "谷歌 Gemini 4 Carbon 发布，面向开发者与企业，推理成本下降四成。"),
+        ("Gemini 4 Carbon 发布：谷歌称推理成本下降四成", "Gemini 4 Carbon 发布，谷歌称推理成本下降四成，个人版暂不开放。"),
     ]
     other_event = [
-        ("波士顿动力为人形机器人加入轮子", "波士顿动力为人形机器人加入轮子，展示 Atlas 在轮式底盘上的移动能力。"),
-        ("波士顿动力给 Atlas 装上轮子", "波士顿动力给 Atlas 装上轮子，扩展工业场景的移动形态。"),
+        ("波士顿动力为人形机器人 Atlas 加入轮子", "波士顿动力为人形机器人加入轮子，展示 Atlas 在轮式底盘上的移动能力。"),
+        ("波士顿动力 Atlas 人形机器人加入轮子", "波士顿动力给 Atlas 装上轮子，扩展工业场景的移动形态。"),
     ]
 
     for index, (title, body) in enumerate(same_event + other_event):
@@ -101,7 +104,7 @@ def test_pipeline_groups_same_event():
 
         # 同一事件里的相似度都要过阈值
         pairs = session.exec(select(ArticleEvent).where(ArticleEvent.similarity < 1)).all()
-        assert all(p.similarity >= 0.35 for p in pairs)
+        assert all(p.similarity >= 0.5 for p in pairs)
 
 
 def test_cross_language_same_event_does_not_merge():

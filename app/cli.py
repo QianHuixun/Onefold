@@ -30,11 +30,20 @@ TOPICS = [
 ]
 
 SOURCES = [
+    # AI
     ("量子位", "https://www.qbitai.com/feed", "ai"),
     ("InfoQ 中文", "https://www.infoq.cn/feed", "ai"),
     ("TechCrunch", "https://techcrunch.com/feed/", "ai"),
+    ("雷锋网", "https://www.leiphone.com/feed", "ai"),
+    # 综合科技
     ("爱范儿", "https://www.ifanr.com/feed", "tech"),
     ("Solidot", "https://www.solidot.org/index.rss", "tech"),
+    ("IT之家", "https://www.ithome.com/rss/", "tech"),
+    ("极客公园", "https://www.geekpark.net/rss", "tech"),
+    ("钛媒体", "https://www.tmtpost.com/rss", "tech"),
+    ("少数派", "https://sspai.com/feed", "tech"),
+    ("开源中国", "https://www.oschina.net/news/rss", "tech"),
+    ("cnBeta", "https://www.cnbeta.com.tw/backend.php", "tech"),
 ]
 
 # (来源, 原标题, 与事件中心的相似度)
