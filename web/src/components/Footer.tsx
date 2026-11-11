@@ -1,4 +1,4 @@
-export default function Footer() {
+export default function Footer({ onAdmin }: { onAdmin?: () => void }) {
   return (
     <footer className="site-foot">
       <div className="foot-grid">
@@ -27,7 +27,7 @@ export default function Footer() {
             <li>RSS 订阅</li>
             <li>GitHub</li>
             <li>关于本站</li>
-            <li>管理入口</li>
+            <li onClick={onAdmin}>管理入口</li>
           </ul>
         </div>
 

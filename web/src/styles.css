@@ -351,3 +351,59 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .detail-sim { font-family: var(--mono); font-size: 11px; color: var(--faint); text-align: right; }
 .detail-open { font-size: 10.5px; color: var(--faint); text-align: right; letter-spacing: 0.06em; }
 .detail-row:hover .detail-open { color: var(--accent); }
+
+/* ── 管理页 ── */
+.admin { padding: 2.6rem var(--pad) 3.5rem; min-height: 60vh; }
+.admin-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;
+  padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+.admin-head h1 { font-family: var(--serif); font-size: 1.9rem; font-weight: 600; margin-top: 10px; }
+.admin-sub { font-size: 11.5px; color: var(--faint); margin-top: 8px; letter-spacing: 0.05em; }
+.admin-actions { display: flex; gap: 8px; }
+.admin-hint { font-size: 12.5px; color: var(--faint); line-height: 1.9; margin-top: 18px; max-width: 620px; }
+.admin-hint code { font-family: var(--mono); font-size: 11.5px; color: var(--accent); }
+
+.btn { border: 1px solid rgba(255, 255, 255, 0.16); padding: 7px 14px; font-size: 11.5px;
+  letter-spacing: 0.06em; color: var(--muted); transition: 0.2s; }
+.btn:hover:not(:disabled) { border-color: rgba(255, 255, 255, 0.42); color: var(--ink); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.solid { background: var(--ink); border-color: var(--ink); color: #0b0b0c; }
+
+.admin-token { display: flex; gap: 10px; margin-top: 22px; max-width: 520px; }
+.admin-token input { flex: 1; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--ink); padding: 9px 12px; font-size: 13px; outline: none; }
+.admin-token input:focus { border-color: rgba(203, 169, 110, 0.7); }
+
+.admin-alert { margin-top: 16px; font-size: 12.5px; color: #e08a72; }
+.admin-ok { margin-top: 16px; font-size: 12.5px; color: var(--accent); }
+
+.admin-table { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 12.5px; }
+.admin-table th { text-align: left; font-weight: 400; font-size: 10px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--faint); padding: 0 12px 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14); }
+.admin-table td { padding: 11px 12px 11px 0; border-bottom: 1px solid var(--line); color: var(--muted); }
+.admin-table td:first-child { color: var(--ink); }
+.admin-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.admin-table .right { text-align: right; }
+.mono { font-family: var(--mono); font-size: 11px; }
+.dim { color: var(--faint); }
+.warn { color: #d98a6a; }
+.ellipsis { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.toggle { font-size: 11px; letter-spacing: 0.06em; color: var(--faint);
+  border: 1px solid rgba(255, 255, 255, 0.14); padding: 4px 10px; border-radius: 999px; transition: 0.2s; }
+.toggle.on { color: var(--accent); border-color: rgba(203, 169, 110, 0.5); }
+.link { font-size: 11.5px; color: var(--faint); transition: color 0.2s; }
+.link.danger:hover { color: #e08a72; }
+
+.admin-add { margin-top: 40px; }
+.admin-form { display: grid; grid-template-columns: 200px 1fr 160px 90px; gap: 10px; margin-top: 12px; }
+.admin-form input, .admin-form select {
+  background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--ink); padding: 9px 12px; font-size: 12.5px; outline: none; font-family: inherit;
+}
+.admin-form input:focus, .admin-form select:focus { border-color: rgba(203, 169, 110, 0.7); }
+
+.admin-logs { margin-top: 44px; }
+.log-row { display: grid; grid-template-columns: 120px 120px 50px 60px 1fr; gap: 16px;
+  padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted);
+  align-items: baseline; }

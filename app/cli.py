@@ -340,6 +340,44 @@ def _run_fetch(session: Session, limit: int) -> dict[str, int]:
     return stats
 
 
+def cmd_purge_demo(_: argparse.Namespace) -> None:
+    """清掉演示残留：demo 文章、只含 demo 文章的事件、没有 Feed 的空源。"""
+    init_db()
+    with Session(engine) as session:
+        demo_articles = session.exec(select(Article).where(Article.status == "demo")).all()
+        demo_ids = [a.id for a in demo_articles]
+        if demo_ids:
+            session.exec(delete(ArticleEvent).where(ArticleEvent.article_id.in_(demo_ids)))
+            session.exec(delete(Article).where(Article.id.in_(demo_ids)))
+            session.commit()
+
+        removed_events = 0
+        for event in session.exec(select(Event)).all():
+            left = session.exec(
+                select(ArticleEvent).where(ArticleEvent.event_id == event.id).limit(1)
+            ).first()
+            if left is None:
+                session.delete(event)
+                removed_events += 1
+        session.commit()
+
+        removed_sources = 0
+        for source in session.exec(select(Source)).all():
+            if source.feed_url:
+                continue
+            used = session.exec(
+                select(Article).where(Article.source_id == source.id).limit(1)
+            ).first()
+            if used is None:
+                session.delete(source)
+                removed_sources += 1
+        session.commit()
+
+        print(
+            f"删除 demo 文章 {len(demo_ids)} 篇、空事件 {removed_events} 个、无 Feed 的源 {removed_sources} 个"
+        )
+
+
 def cmd_fetch(args: argparse.Namespace) -> None:
     init_db()
     with Session(engine) as session:
@@ -458,6 +496,8 @@ def main() -> None:
     pipe.add_argument("--skip-extract", action="store_true", help="跳过正文抽取")
     pipe.add_argument("--rebuild", action="store_true", help="先清空自动聚出来的事件再重跑")
     pipe.set_defaults(func=cmd_pipeline)
+
+    sub.add_parser("purge-demo", help="清掉演示数据残留").set_defaults(func=cmd_purge_demo)
 
     fetch = sub.add_parser("fetch", help="抓取所有启用的源")
     fetch.add_argument("--limit", type=int, default=10, help="每个源最多取几条")

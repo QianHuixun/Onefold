@@ -87,6 +87,19 @@ data/       SQLite 与快照（不进版本库）
 | GET | `/api/stats` | 事件数、来源数、最后更新时间 |
 | GET | `/api/search?q=` | 事件与文章检索 |
 
+管理接口（需 `X-Admin-Token` 请求头，值取自 `.env` 的 `ONEFOLD_ADMIN_TOKEN`）：
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/admin/sources` | 数据源列表 |
+| POST | `/api/admin/sources` | 新增源 |
+| PATCH | `/api/admin/sources/{id}` | 改名 / 换主题 / 启停 |
+| DELETE | `/api/admin/sources/{id}` | 删除（有文章时拒绝，改用停用） |
+| POST | `/api/admin/fetch` | 后台触发一次抓取 |
+| GET | `/api/admin/fetch-log` | 最近抓取记录 |
+
+管理页在页脚「管理入口」，或直接访问 `/?admin=1`。
+
 ## 快捷键
 
 | 键 | 作用 |
