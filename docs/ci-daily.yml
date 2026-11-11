@@ -1,0 +1,62 @@
+name: Daily refresh
+
+on:
+  schedule:
+    # GitHub 的 cron 用 UTC。16:00 UTC = 次日 00:00 北京时间
+    - cron: "0 16 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    env:
+      ONEFOLD_DB: data/onefold.db
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: 恢复数据库
+        uses: actions/cache@v4
+        with:
+          path: data/onefold.db
+          key: onefold-db-${{ github.run_id }}
+          restore-keys: |
+            onefold-db-
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 初始化主题与数据源
+        run: python -m app.cli bootstrap
+
+      - name: 抓取并处理
+        env:
+          ONEFOLD_LLM_API_KEY: ${{ secrets.ONEFOLD_LLM_API_KEY }}
+        run: python -m app.cli daily
+
+      - name: 导出静态快照
+        run: python -m app.cli export --out web/public/data
+
+      - name: 提交快照
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add web/public/data
+          if git diff --staged --quiet; then
+            echo "数据没有变化"
+          else
+            git commit -m "data: 每日快照 $(date -u +%F)"
+            git push
+          fi
