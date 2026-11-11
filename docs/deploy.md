@@ -122,3 +122,79 @@ sudo systemctl daemon-reload
 ```
 
 nginx 本身是那次部署装的，留着不影响，也可以 `sudo apt remove nginx`。
+
+
+## 静态托管（Vercel / GitHub Pages）
+
+前端可以脱离后端单独托管。数据用 `export` 导出成 JSON 快照：
+
+```bash
+.venv/bin/python -m app.cli export --out web/public/data
+```
+
+### Vercel
+
+仓库根目录的 `web/vercel.json` 已经配好：构建命令 `npm run build:static`、输出 `dist`、SPA 重写。
+
+用面板导入仓库时，**Root Directory 必须填 `web`**，其它保持默认。
+
+用 CLI：
+
+```bash
+cd web
+npx vercel login
+npx vercel --prod
+```
+
+免费 Hobby 计划支持私有仓库，不需要把源码公开。
+
+### GitHub Pages（需要公开仓库）
+
+免费账号只能从公开仓库发布 Pages。构建用 `npm run build:pages`（base 是 `/Onefold/`），并需要把 `dist/index.html` 复制成 `404.html` 做 SPA 回退——脚本里已经带了。
+
+对应的工作流（需要有 `workflow` 权限的 token 才能推送）：
+
+```yaml
+name: Deploy to GitHub Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - working-directory: web
+        run: npm ci
+      - working-directory: web
+        run: npm run build:pages
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+```
+
+### 静态模式的三个限制
+
+1. 管理页、实验台不可用（需要后端）
+2. 搜索降级为前端子串匹配，没有分词
+3. 数据是快照，更新要重新 export 再部署
