@@ -15,13 +15,15 @@ venv/
 .env.*
 !.env.example
 
-# 数据与日志
-data/*.db
-data/*.db-journal
-data/*.sqlite3
-data/snapshots/
+# 数据与日志（数据库、快照都不进版本库）
+data/*
+!data/.gitkeep
 *.log
 
 # 编辑器
 .idea/
 .vscode/
+
+# Node
+node_modules/
+dist/

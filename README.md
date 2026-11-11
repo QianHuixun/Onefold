@@ -6,25 +6,64 @@
 
 ## 状态
 
-M0 · 项目骨架，尚未开始开发。产品需求见 [docs/PRD.md](docs/PRD.md)（Word 版：[docs/PRD.docx](docs/PRD.docx)）。
+M0 完成 · 前后端骨架跑通。首页已经从 `/api/events` 读真实数据，八个事件、二十个来源是种子数据。
+产品需求见 [docs/PRD.md](docs/PRD.md)（Word 版：[docs/PRD.docx](docs/PRD.docx)）。
 
-## 技术取向（摘自 PRD）
+## 技术栈
 
-- 后端：FastAPI + SQLite（FTS5 全文检索，jieba 预分词）
-- 前端：时间线 / 事件详情 / 主题切换，零注册，收藏与已读存 localStorage
-- 部署：单机、单文件数据库，公网只读 + 管理 Token
+| 层 | 选择 |
+| --- | --- |
+| 后端 | Python 3.12+ · FastAPI · SQLModel |
+| 数据库 | SQLite（WAL）+ FTS5，中文 jieba 预分词 |
+| 前端 | React 19 · TypeScript · Vite |
+| 部署 | Nginx 静态托管 + uvicorn，单机 |
+
+## 本地运行
+
+```bash
+# 后端
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python -m app.cli seed --force      # 建表 + 灌示例数据
+.venv/bin/uvicorn app.main:app --port 8000    # 接口文档 /docs
+
+# 前端（另开一个终端）
+cd web
+npm install
+npm run dev                                    # http://127.0.0.1:5173
+```
+
+抓取真实 RSS：
+
+```bash
+.venv/bin/python -m app.cli fetch --limit 10
+```
+
+Vite 已把 `/api` 代理到 `127.0.0.1:8000`，前端不需要处理跨域。
 
 ## 目录
 
 ```
+app/        后端：models / api / cli / db
+web/        前端：React + Vite
 docs/       PRD（Markdown 为准，docx 为交付版）
-scripts/    构建与运维脚本（build_prd_docx.py 由 PRD.md 生成 PRD.docx）
-app/        后端（待建）
+design/     视觉规范与四个页面的 HTML 原型（暗色）
+scripts/    探针与文档生成脚本
 data/       SQLite 与快照（不进版本库）
-tests/      测试（待建）
 ```
+
+## 接口
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/events` | 事件列表，支持 `topic` / `limit` / `offset` |
+| GET | `/api/events/{id}` | 事件详情，含多源文章与相似度 |
+| GET | `/api/topics` | 主题列表 |
+| GET | `/api/stats` | 事件数、来源数、最后更新时间 |
+| GET | `/api/search?q=` | 事件与文章检索 |
 
 ## 约定
 
 - 品牌名统一写作 `Onefold`（首字母大写，连写），中文名「归一」
+- 只做桌面端，`min-width: 1200px`，不写响应式
 - 提交信息用中文或英文均可，一句话说清做了什么
