@@ -6,7 +6,7 @@
 
 ## 状态
 
-M0 · 项目骨架，尚未开始开发。产品需求见仓库根目录的 PRD（待迁入）。
+M0 · 项目骨架，尚未开始开发。产品需求见 [docs/PRD.md](docs/PRD.md)（Word 版：[docs/PRD.docx](docs/PRD.docx)）。
 
 ## 技术取向（摘自 PRD）
 
@@ -17,7 +17,11 @@ M0 · 项目骨架，尚未开始开发。产品需求见仓库根目录的 PRD�
 ## 目录
 
 ```
-（待建）
+docs/       PRD（Markdown 为准，docx 为交付版）
+scripts/    构建与运维脚本（build_prd_docx.py 由 PRD.md 生成 PRD.docx）
+app/        后端（待建）
+data/       SQLite 与快照（不进版本库）
+tests/      测试（待建）
 ```
 
 ## 约定
